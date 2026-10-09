@@ -17,4 +17,5 @@ A home-screen web app that keeps UK owners of dogs with lifelong conditions on t
 
 - One task at a time. Each ends with passing tests and a commit.
 - `npm test`, `npm run lint`, `npm run typecheck`, `npm run check:packs` and `npm run build` must all pass; CI runs them on every PR.
+- Database changes are migrations in `supabase/migrations/`. `npm run test:db` applies them to a fresh Postgres (set `DATABASE_URL`) and runs `supabase/tests/*.test.sql`; CI runs it too. Every table has row-level security scoped to the dog's household.
 - Condition packs live in `packs/` and are validated by `src/packs/validate.ts`. Packs under `src/packs/fixtures/` are test-only and cite fixture sources.

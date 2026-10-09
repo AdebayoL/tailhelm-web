@@ -1,3 +1,62 @@
 {
-  "sources": []
+  "sources": [
+    {
+      "id": "vmd-spc-zycortal",
+      "title": "Zycortal 25 mg/ml prolonged-release suspension for injection for dogs: Summary of Product Characteristics",
+      "publisher": "Veterinary Medicines Directorate (UK); MAH Dechra Regulatory B.V., Vm 50406/5053",
+      "edition": "Revised October 2025 (AN: 01807/2025), approved 6 October 2025",
+      "tier": 1,
+      "url": "https://www.vmd.defra.gov.uk/productinformationdatabase/",
+      "retrievedOn": "2026-10-09",
+      "storedCopy": "stored/vmd-spc-zycortal.pdf",
+      "sha256": "6771fefd118bb35c3aea75d6e958f56545e186289c4109b2b8479bd0f56ce1f7"
+    },
+    {
+      "id": "vmd-labelling-zycortal",
+      "title": "Zycortal 25 mg/ml prolonged-release suspension for injection: labelling and package leaflet",
+      "publisher": "Veterinary Medicines Directorate (UK); MAH Dechra Regulatory B.V., Vm 50406/5053",
+      "edition": "Revised December 2025 (AN: 02735/2025)",
+      "tier": 1,
+      "url": "https://www.vmd.defra.gov.uk/productinformationdatabase/",
+      "retrievedOn": "2026-10-09",
+      "storedCopy": "stored/vmd-labelling-zycortal.pdf",
+      "sha256": "90fd3b9432e6a6ae1f00bfba08b892353eed16b19e55a42b4628ee2d95ec78c4"
+    },
+    {
+      "id": "vmd-spc-prednisolone-1mg",
+      "title": "Prednisolone Tablets B.P. (Vet) 1 mg: Summary of Product Characteristics",
+      "publisher": "Veterinary Medicines Directorate (UK); MAH Millpledge Europe BV, Vm 61300/3003",
+      "edition": "Revised April 2026 (AN: 05197/2025), approved 23 April 2026",
+      "tier": 1,
+      "url": "https://www.vmd.defra.gov.uk/productinformationdatabase/",
+      "retrievedOn": "2026-10-09",
+      "storedCopy": "stored/vmd-spc-prednisolone-1mg.pdf",
+      "note": "Indicated as an anti-inflammatory; section 5 excludes adrenal deficiency states. Its role in Addison's comes from the Zycortal SPC section 3.9, which names prednisolone as the glucocorticoid. Identical text is authorised as Vm 61300/5003.",
+      "sha256": "2f307c0d42e3629f1998fcc0cd3410b2f5739c3b60e13f8a04b2f3d349d7c463"
+    },
+    {
+      "id": "vmd-spc-prednisolone-5mg",
+      "title": "Prednisolone Tablets B.P. (Vet) 5 mg: Summary of Product Characteristics",
+      "publisher": "Veterinary Medicines Directorate (UK); MAH Millpledge Europe BV, Vm 61300/3004",
+      "edition": "Revised April 2026 (AN: 05197/2025), approved 23 April 2026",
+      "tier": 1,
+      "url": "https://www.vmd.defra.gov.uk/productinformationdatabase/",
+      "retrievedOn": "2026-10-09",
+      "storedCopy": "stored/vmd-spc-prednisolone-5mg.pdf",
+      "note": "Same text as the 1 mg SPC. Identical text is authorised as Vm 61300/5004.",
+      "sha256": "57fb94f9681f38bdbdea1cce6aa3d88833ad8c4a40478d85f6c9cd4298a4616a"
+    },
+    {
+      "id": "emc-smpc-fludrocortisone",
+      "title": "Fludrocortisone acetate 0.05 mg tablets: Summary of Product Characteristics",
+      "publisher": "MHRA via electronic medicines compendium; MAH Aspire Pharma Ltd, PL 35533/0197",
+      "edition": "Text revised 22 December 2023; emc page updated 3 May 2024",
+      "tier": 1,
+      "url": "https://www.medicines.org.uk/emc",
+      "retrievedOn": "2026-10-09",
+      "storedCopy": "stored/emc-smpc-fludrocortisone.pdf",
+      "note": "A human medicine. No UK veterinary product contains fludrocortisone, so vets prescribe it under the cascade. Its SmPC describes use in people; rules about dogs may not be drawn from it.",
+      "sha256": "77759164f88d79cb316afa71ed61b4bca8fcde5d9abb3e3c24bc69b23b878378"
+    }
+  ]
 }

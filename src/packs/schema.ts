@@ -31,6 +31,10 @@ export const SourceEntry = z.object({
   retrievedOn: z.iso.date(),
   /** Path to the stored copy, relative to the repo's sources/ directory. */
   storedCopy: z.string().optional(),
+  /** SHA-256 of the stored copy, so a silently replaced file fails the build. */
+  sha256: z.string().regex(/^[0-9a-f]{64}$/).optional(),
+  /** Anything a reviewer must know about the document, e.g. a human product used under the cascade. */
+  note: z.string().optional(),
   /** Fixture sources exist only for tests and may never back a published pack. */
   testOnly: z.boolean().optional(),
 });

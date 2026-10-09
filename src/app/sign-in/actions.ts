@@ -30,6 +30,7 @@ export async function signInStep(state: SignInState, formData: FormData): Promis
     const supabase = await createClient();
     const { error } = await supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: true } });
     if (error) {
+      logAuthError("send", error);
       return { step: intent === "resend" ? "code" : "email", email, next, error: messageForAuthError(error.code, "send") };
     }
     return { step: "code", email, next, sentAt: Date.now() };
@@ -43,9 +44,17 @@ export async function signInStep(state: SignInState, formData: FormData): Promis
 
   const supabase = await createClient();
   const { error } = await supabase.auth.verifyOtp({ email, token, type: "email" });
-  if (error) return { ...state, next, error: messageForAuthError(error.code, "verify") };
+  if (error) {
+    logAuthError("verify", error);
+    return { ...state, next, error: messageForAuthError(error.code, "verify") };
+  }
 
   redirect(next);
+}
+
+/** Logs why Supabase refused, for Vercel's logs. Never the email address or the code. */
+function logAuthError(step: "send" | "verify", error: { code?: string; status?: number; message: string }) {
+  console.error(`[sign-in] ${step} failed`, { code: error.code, status: error.status, message: error.message });
 }
 
 export async function signOut() {

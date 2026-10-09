@@ -57,6 +57,19 @@
       "storedCopy": "stored/emc-smpc-fludrocortisone.pdf",
       "note": "A human medicine. No UK veterinary product contains fludrocortisone, so vets prescribe it under the cascade. Its SmPC describes use in people; rules about dogs may not be drawn from it.",
       "sha256": "77759164f88d79cb316afa71ed61b4bca8fcde5d9abb3e3c24bc69b23b878378"
+    },
+    {
+      "id": "aaha-2023-endocrinopathies",
+      "title": "2023 AAHA Selected Endocrinopathies of Dogs and Cats Guidelines",
+      "publisher": "American Animal Hospital Association; Bugbee A, Rucinsky R, Cazabon S, Kvitko-White H, Lathan P, Nichelason A, Rudolph L. J Am Anim Hosp Assoc",
+      "edition": "2023;59(3):113–135",
+      "tier": 2,
+      "url": "https://www.aaha.org/endocrine-disease",
+      "doi": "10.5326/JAAHA-MS-7368",
+      "retrievedOn": "2026-10-09",
+      "storedCopy": "stored/aaha-2023-endocrinopathies.pdf",
+      "sha256": "3cbc4e8ffa4b8e5f42140fda76e9e1726d24cea741c3a350f56df0b0150d91e9",
+      "note": "The stored copy is the 23-page final version headed 'Final' (file JAAHA7368_proof.pdf). Its printed page numbers run 1–23, not the journal's 113–135, so citations give the PDF page and the section heading. The canine hypoadrenocorticism section is on pages 9–13. A US task force: drug names and labelled doses follow US products; UK product facts come from the VMD SPCs."
     }
   ]
 }

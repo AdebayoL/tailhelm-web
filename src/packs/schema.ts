@@ -69,7 +69,10 @@ export const Medicine = z.object({
   scheduleKind: ScheduleKind,
   /** An interval medicine whose administration starts a new cycle (e.g. DOCP). */
   setsAnchor: z.boolean().optional(),
-  /** Window for interval medicines, in days. The owner's vet sets the actual interval. */
+  /**
+   * Published window for an interval medicine, in days, only where a source gives one.
+   * Without it the interval comes entirely from the owner's vet.
+   */
   windowDays: z.object({ min: z.number().int().positive(), max: z.number().int().positive() }).optional(),
   /** Variants of the condition this medicine applies to; omitted means all. */
   variants: z.array(Key).optional(),

@@ -57,6 +57,12 @@ describe("validatePack", () => {
     expect(messages(pack)).toContain("An offset rule needs a medicine that sets the anchor");
   });
 
+  it("accepts an interval medicine with no published window, leaving the interval to the vet", () => {
+    const pack = clone(stubCycle);
+    delete (pack.medicines[1] as { windowDays?: unknown }).windowDays;
+    expect(validatePack(pack, register)).toEqual([]);
+  });
+
   it("rejects an attested pack without a recorded attestation", () => {
     const pack = { ...clone(stubCycle), status: "attested" };
     expect(messages(pack)).toContain("A pack marked attested needs a recorded vet attestation");

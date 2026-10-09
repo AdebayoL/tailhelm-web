@@ -2,18 +2,34 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { TABS } from "@/lib/app/nav";
 import { requireOwner } from "@/lib/auth/session";
+import { getMyDog } from "@/lib/dogs/queries";
 import { signOut } from "../../sign-in/actions";
 import { TabPage } from "../_components/tab-page";
+import { DogProfileForm } from "./dog-profile-form";
 
 export const metadata: Metadata = { title: "Dog · Tailhelm" };
 
 export default function DogPage() {
   return (
     <TabPage tab={TABS[3]}>
+      <Suspense fallback={<p>Loading…</p>}>
+        <Profile />
+      </Suspense>
       <Suspense fallback={null}>
         <Account />
       </Suspense>
     </TabPage>
+  );
+}
+
+async function Profile() {
+  await requireOwner();
+  const dog = await getMyDog();
+  return (
+    <section className="flex flex-col gap-4">
+      <h2 className="text-2xl font-semibold">{dog ? dog.name : "Add your dog"}</h2>
+      <DogProfileForm dog={dog} />
+    </section>
   );
 }
 

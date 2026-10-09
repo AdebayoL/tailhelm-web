@@ -10,7 +10,8 @@
     "test": "vitest run",
     "typecheck": "next typegen && tsc --noEmit",
     "check:packs": "tsx scripts/check-packs.ts",
-    "test:db": "bash scripts/test-db.sh"
+    "test:db": "bash scripts/test-db.sh",
+    "pack:migration": "tsx scripts/pack-migration.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

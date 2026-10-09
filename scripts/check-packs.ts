@@ -1,11 +1,17 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { checkPackSeeded } from "../src/packs/pack-sql";
 import { checkRegisterFiles } from "../src/packs/register-files";
+import { ConditionPack } from "../src/packs/schema";
 import { validatePack } from "../src/packs/validate";
 
 const root = join(import.meta.dirname, "..");
 const register = JSON.parse(readFileSync(join(root, "sources/register.json"), "utf8"));
 const packFiles = readdirSync(join(root, "packs")).filter((f) => f.endsWith(".pack.json"));
+const migrationsDir = join(root, "supabase", "migrations");
+const migrations = readdirSync(migrationsDir)
+  .filter((f) => f.endsWith(".sql"))
+  .map((name) => ({ name, sql: readFileSync(join(migrationsDir, name), "utf8") }));
 
 let failed = false;
 
@@ -21,6 +27,9 @@ if (registerIssues.length > 0) {
 for (const file of packFiles) {
   const pack = JSON.parse(readFileSync(join(root, "packs", file), "utf8"));
   const issues = validatePack(pack, register);
+  if (issues.length === 0) {
+    for (const seed of checkPackSeeded(ConditionPack.parse(pack), migrations)) issues.push({ path: "$", message: seed.message });
+  }
   if (issues.length > 0) {
     failed = true;
     console.error(`✗ ${file}`);

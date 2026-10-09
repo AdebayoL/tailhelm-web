@@ -47,8 +47,8 @@ insert into auth.users (id, email) values
 
 select pg_temp.expect((select count(*) from public.profiles), 4, 'signing up creates a profile');
 
-insert into public.conditions (key, name, status) values ('addisons', 'Addison''s disease', 'draft');
-insert into public.condition_packs (condition_key, version, pack_json) values ('addisons', '0.1.0', '{}');
+select pg_temp.expect((select count(*) from public.condition_packs where condition_key = 'addisons'), 1,
+  'the Addison''s pack is seeded by its migration');
 
 -- Alice adds Bella and invites Bob and Dave.
 set role authenticated;

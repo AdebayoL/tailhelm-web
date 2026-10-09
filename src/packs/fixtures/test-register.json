@@ -1,0 +1,31 @@
+{
+  "sources": [
+    {
+      "id": "test-spc",
+      "title": "Test product information (fixture, not a real document)",
+      "publisher": "Tailhelm test suite",
+      "edition": "v1",
+      "tier": 1,
+      "retrievedOn": "2026-10-09",
+      "testOnly": true
+    },
+    {
+      "id": "test-consensus",
+      "title": "Test consensus statement (fixture, not a real document)",
+      "publisher": "Tailhelm test suite",
+      "edition": "2026",
+      "tier": 2,
+      "retrievedOn": "2026-10-09",
+      "testOnly": true
+    },
+    {
+      "id": "test-textbook",
+      "title": "Test reference text (fixture, not a real document)",
+      "publisher": "Tailhelm test suite",
+      "edition": "1st",
+      "tier": 4,
+      "retrievedOn": "2026-10-09",
+      "testOnly": true
+    }
+  ]
+}

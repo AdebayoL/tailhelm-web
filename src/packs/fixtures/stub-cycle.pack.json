@@ -1,0 +1,76 @@
+{
+  "condition": "stub_cycle",
+  "version": "0.0.1",
+  "status": "draft",
+  "variants": ["typical", "atypical"],
+  "medicines": [
+    {
+      "key": "daily_tablet",
+      "name": "Daily tablet",
+      "scheduleKind": "fixed",
+      "citations": [{ "sourceId": "test-spc", "section": "4.9", "sourceVersion": "v1", "tier": 1, "quote": "Fixture text." }]
+    },
+    {
+      "key": "cycle_injection",
+      "name": "Cycle injection",
+      "scheduleKind": "interval",
+      "setsAnchor": true,
+      "windowDays": { "min": 25, "max": 31 },
+      "variants": ["typical"],
+      "citations": [{ "sourceId": "test-spc", "section": "4.9", "sourceVersion": "v1", "tier": 1, "quote": "Fixture text." }]
+    }
+  ],
+  "observationTypes": [
+    {
+      "key": "electrolytes",
+      "name": "Electrolytes",
+      "fields": [
+        { "key": "sodium", "label": "Sodium", "unit": "mmol/L" },
+        { "key": "potassium", "label": "Potassium", "unit": "mmol/L" }
+      ],
+      "citations": [{ "sourceId": "test-consensus", "section": "5", "sourceVersion": "2026", "tier": 2, "quote": "Fixture text." }]
+    }
+  ],
+  "derivedValues": [
+    {
+      "key": "na_k_ratio",
+      "name": "Na:K ratio",
+      "observationType": "electrolytes",
+      "operation": "ratio",
+      "numerator": "sodium",
+      "denominator": "potassium",
+      "citations": [{ "sourceId": "test-consensus", "section": "5", "sourceVersion": "2026", "tier": 2, "quote": "Fixture text." }]
+    }
+  ],
+  "monitoringRules": [
+    {
+      "key": "electrolytes_after_injection",
+      "description": "Electrolytes around day 10 and day 25 after an injection",
+      "scheduleKind": "offset",
+      "offsetsDays": [10, 25],
+      "observationType": "electrolytes",
+      "citations": [{ "sourceId": "test-spc", "section": "4.9", "sourceVersion": "v1", "tier": 1, "quote": "Fixture text." }]
+    }
+  ],
+  "events": [],
+  "crisisSigns": [
+    {
+      "key": "collapse",
+      "label": "Collapse",
+      "alertWording": "Call your vet now.",
+      "citations": [{ "sourceId": "test-consensus", "section": "6", "sourceVersion": "2026", "tier": 2, "quote": "Fixture text." }]
+    }
+  ],
+  "alertRules": [],
+  "trendRules": [],
+  "definitions": [
+    {
+      "key": "na_k",
+      "term": "Na:K ratio",
+      "text": "Sodium divided by potassium.",
+      "citations": [{ "sourceId": "test-textbook", "section": "ch. 1", "sourceVersion": "1st", "tier": 4, "quote": "Fixture text." }]
+    }
+  ],
+  "conflicts": [],
+  "openQuestions": []
+}

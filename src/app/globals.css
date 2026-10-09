@@ -1,0 +1,27 @@
+@import "tailwindcss";
+
+/* Placeholder brand tokens until the design system lands. Amber and red are
+   reserved for real alerts and must not be used anywhere else. */
+:root {
+  --green: #1f4d3a;
+  --sand: #e9dfcf;
+  --paper: #f7f3ec;
+  --ink: #1b1b1a;
+  --alert-amber: #b26b00;
+  --alert-red: #b3261e;
+}
+
+@theme inline {
+  --color-green: var(--green);
+  --color-sand: var(--sand);
+  --color-paper: var(--paper);
+  --color-ink: var(--ink);
+  --color-alert-amber: var(--alert-amber);
+  --color-alert-red: var(--alert-red);
+  --font-sans: var(--font-source-sans);
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+}

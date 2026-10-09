@@ -7,8 +7,10 @@
   --sand: #e9dfcf;
   --paper: #f7f3ec;
   --ink: #1b1b1a;
-  --alert-amber: #b26b00;
+  --alert-amber: #8f5600;
   --alert-red: #b3261e;
+  /* The emergency button's fill, the same in both themes so white text keeps its contrast. */
+  --emergency: #b3261e;
 }
 
 @theme inline {
@@ -18,7 +20,21 @@
   --color-ink: var(--ink);
   --color-alert-amber: var(--alert-amber);
   --color-alert-red: var(--alert-red);
+  --color-emergency: var(--emergency);
   --font-sans: var(--font-source-sans);
+}
+
+/* Dark theme for night use: same roles, darker surfaces. Red and amber stay
+   reserved for alerts and keep enough contrast on the dark paper. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --green: #8fc9a8;
+    --sand: #3a3530;
+    --paper: #161513;
+    --ink: #ece7df;
+    --alert-amber: #f0a640;
+    --alert-red: #e5534b;
+  }
 }
 
 body {

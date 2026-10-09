@@ -116,9 +116,6 @@ export function validatePack(rawPack: unknown, rawRegister: unknown): Issue[] {
     if (m.setsAnchor && m.scheduleKind !== "interval") {
       issues.push({ path, message: "Only an interval medicine can set the anchor" });
     }
-    if (m.scheduleKind === "interval" && !m.windowDays) {
-      issues.push({ path, message: "An interval medicine needs its published window in days" });
-    }
     if (m.windowDays && m.windowDays.min > m.windowDays.max) {
       issues.push({ path, message: "Window minimum is after its maximum" });
     }

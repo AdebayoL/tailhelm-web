@@ -1,0 +1,425 @@
+{
+  "condition": "addisons",
+  "version": "0.1.0",
+  "status": "draft",
+  "variants": [
+    "typical",
+    "atypical"
+  ],
+  "medicines": [
+    {
+      "key": "glucocorticoid",
+      "name": "Daily steroid tablet (for example prednisolone)",
+      "scheduleKind": "fixed",
+      "citations": [
+        {
+          "sourceId": "aaha-2023-endocrinopathies",
+          "sourceVersion": "2023;59(3):113–135",
+          "tier": 2,
+          "section": "PDF p10, Therapy",
+          "quote": "For cortisol deficiency, a small daily dose of glucocorticoids is recommended."
+        },
+        {
+          "sourceId": "vmd-spc-zycortal",
+          "sourceVersion": "Revised October 2025 (AN: 01807/2025)",
+          "tier": 1,
+          "section": "3.9",
+          "quote": "Zycortal replaces the mineralocorticoid hormones only. Dogs with combined glucocorticoid and mineralocorticoid deficiency should also receive a glucocorticoid such as prednisolone taking into account the current scientific knowledge."
+        },
+        {
+          "sourceId": "vmd-spc-prednisolone-vm61300-3004",
+          "sourceVersion": "Revised April 2026 (AN: 05197/2025)",
+          "tier": 1,
+          "section": "4.5",
+          "quote": "Treatment should not be withdrawn suddenly"
+        }
+      ]
+    },
+    {
+      "key": "docp",
+      "name": "DOCP injection (Zycortal)",
+      "scheduleKind": "interval",
+      "setsAnchor": true,
+      "variants": [
+        "typical"
+      ],
+      "citations": [
+        {
+          "sourceId": "vmd-spc-zycortal",
+          "sourceVersion": "Revised October 2025 (AN: 01807/2025)",
+          "tier": 1,
+          "section": "3.2",
+          "quote": "For use as replacement therapy for mineralocorticoid deficiency in dogs with primary hypoadrenocorticism (Addison’s disease)."
+        },
+        {
+          "sourceId": "vmd-spc-zycortal",
+          "sourceVersion": "Revised October 2025 (AN: 01807/2025)",
+          "tier": 1,
+          "section": "3.9",
+          "quote": "Zycortal is intended for long term administration at intervals and doses dependent upon individual response."
+        },
+        {
+          "sourceId": "aaha-2023-endocrinopathies",
+          "sourceVersion": "2023;59(3):113–135",
+          "tier": 2,
+          "section": "PDF p10, Therapy",
+          "quote": "The dose and the dosing interval are determined by electrolyte monitoring."
+        },
+        {
+          "sourceId": "aaha-2023-endocrinopathies",
+          "sourceVersion": "2023;59(3):113–135",
+          "tier": 2,
+          "section": "PDF p11, Clinical Tips",
+          "quote": "Once a stable dose and dosing interval are achieved, monthly DOCP injections may be administered by someone other than the veterinarian."
+        }
+      ]
+    },
+    {
+      "key": "fludrocortisone",
+      "name": "Fludrocortisone tablet",
+      "scheduleKind": "fixed",
+      "variants": [
+        "typical"
+      ],
+      "citations": [
+        {
+          "sourceId": "aaha-2023-endocrinopathies",
+          "sourceVersion": "2023;59(3):113–135",
+          "tier": 2,
+          "section": "PDF p10, Therapy",
+          "quote": "If DOCP cannot be used, consideration can be given to using fludrocortisone."
+        }
+      ]
+    }
+  ],
+  "observationTypes": [
+    {
+      "key": "electrolytes",
+      "name": "Sodium and potassium blood test",
+      "fields": [
+        {
+          "key": "sodium",
+          "label": "Sodium",
+          "unit": "mmol/L"
+        },
+        {
+          "key": "potassium",
+          "label": "Potassium",
+          "unit": "mmol/L"
+        }
+      ],
+      "citations": [
+        {
+          "sourceId": "vmd-spc-zycortal",
+          "sourceVersion": "Revised October 2025 (AN: 01807/2025)",
+          "tier": 1,
+          "section": "3.9",
+          "quote": "Re-evaluate the dog and measure the serum sodium/potassium ratio (Na⁺/K⁺ ratio) approximately 10 days after the first dose"
+        },
+        {
+          "sourceId": "aaha-2023-endocrinopathies",
+          "sourceVersion": "2023;59(3):113–135",
+          "tier": 2,
+          "section": "PDF p10, Therapy",
+          "quote": "Check electrolyte levels 10–14 days after injection and again 25 days after injection."
+        }
+      ]
+    },
+    {
+      "key": "signs",
+      "name": "Signs noticed today",
+      "fields": [
+        {
+          "key": "reduced_appetite",
+          "label": "Eating less or not eating"
+        },
+        {
+          "key": "lethargy",
+          "label": "Less energy than usual"
+        },
+        {
+          "key": "vomiting",
+          "label": "Vomiting"
+        },
+        {
+          "key": "diarrhoea",
+          "label": "Diarrhoea"
+        },
+        {
+          "key": "blood_in_stool",
+          "label": "Blood in stool, or black stool"
+        },
+        {
+          "key": "weakness",
+          "label": "Weakness"
+        },
+        {
+          "key": "drinking_more",
+          "label": "Drinking more"
+        },
+        {
+          "key": "urinating_more",
+          "label": "Urinating more"
+        },
+        {
+          "key": "eating_more",
+          "label": "Eating more"
+        },
+        {
+          "key": "panting",
+          "label": "Panting"
+        },
+        {
+          "key": "hair_loss",
+          "label": "Hair loss"
+        }
+      ],
+      "citations": [
+        {
+          "sourceId": "aaha-2023-endocrinopathies",
+          "sourceVersion": "2023;59(3):113–135",
+          "tier": 2,
+          "section": "PDF p10, Therapy",
+          "quote": "Dose should be increased when a dog shows clinical signs of Addison’s disease, such as anorexia, lethargy, vomiting, diarrhea, hematochezia, and melena."
+        },
+        {
+          "sourceId": "aaha-2023-endocrinopathies",
+          "sourceVersion": "2023;59(3):113–135",
+          "tier": 2,
+          "section": "PDF p10, Therapy",
+          "quote": "Dose should be decreased when the dog has side effects of glucocorticoid administration including polyuria/polydipsia, polyphagia, panting, muscle wasting, elevated ALP, or hair loss."
+        },
+        {
+          "sourceId": "vmd-spc-zycortal",
+          "sourceVersion": "Revised October 2025 (AN: 01807/2025)",
+          "tier": 1,
+          "section": "3.9",
+          "quote": "Clinical signs of depression, lethargy, vomiting, diarrhoea or weakness: Increase the glucocorticoid dose."
+        },
+        {
+          "sourceId": "vmd-spc-zycortal",
+          "sourceVersion": "Revised October 2025 (AN: 01807/2025)",
+          "tier": 1,
+          "section": "3.6",
+          "quote": "Very common Polydipsia (>1 animal / 10 animals Polyuria treated)"
+        }
+      ]
+    }
+  ],
+  "derivedValues": [
+    {
+      "key": "na_k_ratio",
+      "name": "Na:K ratio",
+      "observationType": "electrolytes",
+      "operation": "ratio",
+      "numerator": "sodium",
+      "denominator": "potassium",
+      "citations": [
+        {
+          "sourceId": "vmd-spc-zycortal",
+          "sourceVersion": "Revised October 2025 (AN: 01807/2025)",
+          "tier": 1,
+          "section": "3.9",
+          "quote": "Re-evaluate the dog and measure the serum sodium/potassium ratio (Na⁺/K⁺ ratio) approximately 10 days after the first dose"
+        },
+        {
+          "sourceId": "aaha-2023-endocrinopathies",
+          "sourceVersion": "2023;59(3):113–135",
+          "tier": 2,
+          "section": "PDF p10, Table 7",
+          "quote": "Na:K ratio <27"
+        }
+      ]
+    }
+  ],
+  "monitoringRules": [
+    {
+      "key": "electrolytes_after_injection",
+      "description": "Sodium and potassium blood test around day 10 and day 25 after an injection, on the days your vet sets",
+      "scheduleKind": "offset",
+      "offsetsDays": [
+        10,
+        25
+      ],
+      "observationType": "electrolytes",
+      "citations": [
+        {
+          "sourceId": "vmd-spc-zycortal",
+          "sourceVersion": "Revised October 2025 (AN: 01807/2025)",
+          "tier": 1,
+          "section": "3.9",
+          "quote": "Re-evaluate the dog and measure the serum sodium/potassium ratio (Na⁺/K⁺ ratio) approximately 10 days after the first dose"
+        },
+        {
+          "sourceId": "vmd-spc-zycortal",
+          "sourceVersion": "Revised October 2025 (AN: 01807/2025)",
+          "tier": 1,
+          "section": "3.9",
+          "quote": "At approximately 25 days after the first dose, re-evaluate the dog and measure the Na⁺/K⁺ ratio."
+        },
+        {
+          "sourceId": "aaha-2023-endocrinopathies",
+          "sourceVersion": "2023;59(3):113–135",
+          "tier": 2,
+          "section": "PDF p10, Therapy",
+          "quote": "Check electrolyte levels 10–14 days after injection and again 25 days after injection."
+        }
+      ]
+    }
+  ],
+  "events": [
+    {
+      "key": "stressful_event",
+      "name": "Stressful event coming up (kennels, travel, surgery, fireworks)",
+      "citations": [
+        {
+          "sourceId": "vmd-spc-zycortal",
+          "sourceVersion": "Revised October 2025 (AN: 01807/2025)",
+          "tier": 1,
+          "section": "3.9",
+          "quote": "Prior to a stressful situation, consider temporarily increasing the dose of glucocorticoid."
+        }
+      ]
+    }
+  ],
+  "crisisSigns": [],
+  "alertRules": [
+    {
+      "key": "signs_logged",
+      "level": "amber",
+      "description": "Any sign in 'Signs noticed today' is logged",
+      "ownerWording": "You logged {sign} on {date}. Mention this to your vet.",
+      "citations": [
+        {
+          "sourceId": "aaha-2023-endocrinopathies",
+          "sourceVersion": "2023;59(3):113–135",
+          "tier": 2,
+          "section": "PDF p10, Therapy",
+          "quote": "Dose should be increased when a dog shows clinical signs of Addison’s disease, such as anorexia, lethargy, vomiting, diarrhea, hematochezia, and melena."
+        },
+        {
+          "sourceId": "aaha-2023-endocrinopathies",
+          "sourceVersion": "2023;59(3):113–135",
+          "tier": 2,
+          "section": "PDF p10, Therapy",
+          "quote": "Dose should be decreased when the dog has side effects of glucocorticoid administration including polyuria/polydipsia, polyphagia, panting, muscle wasting, elevated ALP, or hair loss."
+        },
+        {
+          "sourceId": "vmd-spc-zycortal",
+          "sourceVersion": "Revised October 2025 (AN: 01807/2025)",
+          "tier": 1,
+          "section": "3.9",
+          "quote": "Clinical signs of depression, lethargy, vomiting, diarrhoea or weakness: Increase the glucocorticoid dose."
+        }
+      ]
+    },
+    {
+      "key": "opened_vial_limit",
+      "level": "amber",
+      "description": "An opened Zycortal vial reaches 4 calendar months from the date it was opened",
+      "ownerWording": "This vial was opened on {opened_on}. The label says use within 4 months of opening, which is {use_by}. Contact your vet about a new vial.",
+      "citations": [
+        {
+          "sourceId": "vmd-spc-zycortal",
+          "sourceVersion": "Revised October 2025 (AN: 01807/2025)",
+          "tier": 1,
+          "section": "5.2",
+          "quote": "Shelf life after first opening the immediate packaging: 4 months."
+        },
+        {
+          "sourceId": "vmd-labelling-zycortal",
+          "sourceVersion": "Revised December 2025 (AN: 02735/2025)",
+          "tier": 1,
+          "section": "Outer package, section 8",
+          "quote": "Once opened use within 4 months."
+        }
+      ]
+    }
+  ],
+  "trendRules": [],
+  "definitions": [
+    {
+      "key": "na_k_ratio",
+      "term": "Na:K ratio",
+      "text": "Sodium divided by potassium, both from the same blood test.",
+      "citations": [
+        {
+          "sourceId": "vmd-spc-zycortal",
+          "sourceVersion": "Revised October 2025 (AN: 01807/2025)",
+          "tier": 1,
+          "section": "3.9",
+          "quote": "Re-evaluate the dog and measure the serum sodium/potassium ratio (Na⁺/K⁺ ratio) approximately 10 days after the first dose"
+        },
+        {
+          "sourceId": "aaha-2023-endocrinopathies",
+          "sourceVersion": "2023;59(3):113–135",
+          "tier": 2,
+          "section": "PDF p10, Table 7",
+          "quote": "Na:K ratio <27"
+        }
+      ]
+    },
+    {
+      "key": "atypical",
+      "term": "Atypical Addison's",
+      "text": "Addison's with signs of low cortisol but without the usual changes in sodium and potassium.",
+      "citations": [
+        {
+          "sourceId": "aaha-2023-endocrinopathies",
+          "sourceVersion": "2023;59(3):113–135",
+          "tier": 2,
+          "section": "PDF p9–10, Overview",
+          "quote": "the atypical form (clinical signs reflecting cortisol deficiency without electrolyte derangements) is more often chronic. Atypical HA is characterized by vomiting, lethargy, anorexia, and diarrhea"
+        }
+      ]
+    },
+    {
+      "key": "addisonian_crisis",
+      "term": "Addisonian crisis",
+      "text": "The most serious form of Addison's, when a dog goes into shock.",
+      "citations": [
+        {
+          "sourceId": "aaha-2023-endocrinopathies",
+          "sourceVersion": "2023;59(3):113–135",
+          "tier": 2,
+          "section": "PDF p12, Group 3: Addisonian crisis",
+          "quote": "Group 3 dogs present in hypovolemic shock with or without historic episodic signs consistent with hypoadrenocorticism. This is the most serious and life-threatening manifestation of hypoadrenocorticism"
+        }
+      ]
+    }
+  ],
+  "conflicts": [
+    {
+      "topic": "When to test sodium and potassium after an injection",
+      "citations": [
+        {
+          "sourceId": "vmd-spc-zycortal",
+          "sourceVersion": "Revised October 2025 (AN: 01807/2025)",
+          "tier": 1,
+          "section": "3.9",
+          "quote": "Re-evaluate the dog and measure the serum sodium/potassium ratio (Na⁺/K⁺ ratio) approximately 10 days after the first dose"
+        },
+        {
+          "sourceId": "aaha-2023-endocrinopathies",
+          "sourceVersion": "2023;59(3):113–135",
+          "tier": 2,
+          "section": "PDF p10, Therapy",
+          "quote": "Check electrolyte levels 10–14 days after injection and again 25 days after injection."
+        }
+      ],
+      "conservativeDefault": "Offer the day 10 and day 25 reminders after every injection, not only the first. The owner's vet sets the actual days.",
+      "ownerWording": "Published guidance differs slightly on the first test: about day 10 (product information) or days 10 to 14 (AAHA guidelines). Your vet's dates are used."
+    }
+  ],
+  "openQuestions": [
+    "Crisis signs in words an owner would recognise. Both sources describe the crisis only as hypovolaemic shock, so crisisSigns is empty until a source lists owner-observable signs or the attesting vet approves specific wording.",
+    "Happening now for Addison's: no source gives thresholds, so it runs as a timer only.",
+    "Trend thresholds: no source gives any, so trends show numbers without judgement.",
+    "Whether owners should see a reference value for the Na:K ratio. The sources give values only for diagnosis or dose changes.",
+    "Whether the conservative default for monitoring (reminders after every injection) is right, or only while the dose is being set.",
+    "AAHA's 'routine biannual health care visits': confirm this means twice a year before adding a check-up reminder.",
+    "Fludrocortisone has no UK veterinary product; AAHA backs it only when DOCP cannot be used. Confirm it should appear for typical Addison's only.",
+    "Wording of the stress-plan prompt. The source sentence is addressed to vets and is never shown; the app asks the owner to agree a plan with their vet and shows the vet's own words.",
+    "Opened-vial alert: the source gives the 4-month limit only. Any earlier warning (for example 14 days before) has no source and is not included."
+  ]
+}

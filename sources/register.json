@@ -23,26 +23,26 @@
       "sha256": "90fd3b9432e6a6ae1f00bfba08b892353eed16b19e55a42b4628ee2d95ec78c4"
     },
     {
-      "id": "vmd-spc-prednisolone-1mg",
+      "id": "vmd-spc-prednisolone-vm61300-3003",
       "title": "Prednisolone Tablets B.P. (Vet) 1 mg: Summary of Product Characteristics",
       "publisher": "Veterinary Medicines Directorate (UK); MAH Millpledge Europe BV, Vm 61300/3003",
       "edition": "Revised April 2026 (AN: 05197/2025), approved 23 April 2026",
       "tier": 1,
       "url": "https://www.vmd.defra.gov.uk/productinformationdatabase/",
       "retrievedOn": "2026-10-09",
-      "storedCopy": "stored/vmd-spc-prednisolone-1mg.pdf",
+      "storedCopy": "stored/vmd-spc-prednisolone-vm61300-3003.pdf",
       "note": "Indicated as an anti-inflammatory; section 5 excludes adrenal deficiency states. Its role in Addison's comes from the Zycortal SPC section 3.9, which names prednisolone as the glucocorticoid. Identical text is authorised as Vm 61300/5003.",
       "sha256": "2f307c0d42e3629f1998fcc0cd3410b2f5739c3b60e13f8a04b2f3d349d7c463"
     },
     {
-      "id": "vmd-spc-prednisolone-5mg",
+      "id": "vmd-spc-prednisolone-vm61300-3004",
       "title": "Prednisolone Tablets B.P. (Vet) 5 mg: Summary of Product Characteristics",
       "publisher": "Veterinary Medicines Directorate (UK); MAH Millpledge Europe BV, Vm 61300/3004",
       "edition": "Revised April 2026 (AN: 05197/2025), approved 23 April 2026",
       "tier": 1,
       "url": "https://www.vmd.defra.gov.uk/productinformationdatabase/",
       "retrievedOn": "2026-10-09",
-      "storedCopy": "stored/vmd-spc-prednisolone-5mg.pdf",
+      "storedCopy": "stored/vmd-spc-prednisolone-vm61300-3004.pdf",
       "note": "Same text as the 1 mg SPC. Identical text is authorised as Vm 61300/5004.",
       "sha256": "57fb94f9681f38bdbdea1cce6aa3d88833ad8c4a40478d85f6c9cd4298a4616a"
     },

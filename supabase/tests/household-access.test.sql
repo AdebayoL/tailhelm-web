@@ -91,6 +91,8 @@ select pg_temp.expect((select count(*) from public.treatments), 1, 'a member see
 select pg_temp.expect((select count(*) from public.observations), 1, 'a member sees results');
 select pg_temp.expect((select count(*) from public.events), 1, 'a member sees events');
 select pg_temp.expect((select count(*) from public.profiles), 1, 'a person sees only their own profile');
+select pg_temp.expect((select count(*) from public.household_names(:'bella') where name = 'alice'), 1,
+  'a member sees the names of the household, so a tick shows who gave it');
 
 -- --- A stranger sees nothing and can change nothing ------------------------
 
@@ -102,6 +104,7 @@ select pg_temp.expect((select count(*) from public.plan_items), 0, 'a stranger s
 select pg_temp.expect((select count(*) from public.treatments), 0, 'a stranger sees no treatment');
 select pg_temp.expect((select count(*) from public.observations), 0, 'a stranger sees no result');
 select pg_temp.expect((select count(*) from public.events), 0, 'a stranger sees no event');
+select pg_temp.expect((select count(*) from public.household_names(:'bella')), 0, 'a stranger sees no names');
 with changed as (update public.dogs set name = 'Taken' returning 1)
 select pg_temp.expect(count(*), 0, 'a stranger cannot rename the dog') from changed;
 select pg_temp.expect_error(

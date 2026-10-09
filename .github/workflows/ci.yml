@@ -22,20 +22,14 @@ jobs:
       - run: npm run build
 
   database:
-    runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_PASSWORD: postgres
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
+    # The runner image ships PostgreSQL 16, so no image is pulled from Docker Hub
+    # (pulls there failed on 9 Oct 2026). Pinned so the version doesn't change under us.
+    runs-on: ubuntu-24.04
     steps:
+      - name: Start PostgreSQL
+        run: |
+          sudo systemctl start postgresql.service
+          sudo -u postgres psql -c "alter user postgres password 'postgres'"
       - uses: actions/checkout@v4
       - run: npm run test:db
         env:

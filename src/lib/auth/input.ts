@@ -4,7 +4,7 @@ import { z } from "zod";
 export const HOME_PATH = "/today";
 
 /** Routes that need a signed-in owner. The proxy redirects; each page checks again. */
-export const PROTECTED_PREFIXES = ["/today"] as const;
+export const PROTECTED_PREFIXES = ["/today", "/trends", "/care-team", "/dog", "/emergency"] as const;
 
 export const CODE_LENGTH = 6;
 

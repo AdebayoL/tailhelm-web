@@ -11,10 +11,11 @@ import { signsAlertText, signsRule, signsType } from "@/lib/signs/signs";
 import { discardDate, vialRule, vialWarning, vialWarningText } from "@/lib/treatments/vial";
 import { getPack } from "@/packs/registry";
 import { TabPage } from "../_components/tab-page";
-import { undoQuickCheck, undoTick } from "./actions";
+import { removeStressEvent, undoQuickCheck, undoTick } from "./actions";
 import { DoseTick } from "./dose-tick";
 import { InjectionLog } from "./injection-log";
 import { QuickCheck } from "./quick-check";
+import { StressEventForm } from "./stress-event-form";
 
 export const metadata: Metadata = { title: "Today · Tailhelm" };
 
@@ -58,7 +59,9 @@ async function TodayContent() {
 
   const today = buildToday(input);
   const { next } = today;
-  const card = nextActionText(next, dog.name, formatDate);
+  // The vet's stress plan, exactly as the owner copied it.
+  const stressPlan = plan.items.find((i) => i.schedule_json.kind === "event") ?? null;
+  const card = nextActionText(next, dog.name, formatDate, stressPlan?.vet_instructions ?? null);
   const overdue = next.kind === "overdue";
   const pack = getPack(plan.condition.condition_key);
   const vials = vialRule(pack);
@@ -291,6 +294,56 @@ async function TodayContent() {
           ))}
         </section>
       )}
+
+      <section aria-labelledby="events" className="flex flex-col gap-3">
+        <h2 id="events" className="text-xl font-semibold">
+          Stressful events
+        </h2>
+        {stressPlan?.vet_instructions ? (
+          <div className="flex flex-col gap-1 rounded-2xl border border-ink/30 p-4">
+            <p className="text-lg font-semibold">Your vet&rsquo;s plan</p>
+            <p className="whitespace-pre-line text-lg">{stressPlan.vet_instructions}</p>
+            {stressPlan.set_by_vet_on && (
+              <p className="text-base">Set by your vet on {formatDate(stressPlan.set_by_vet_on)}.</p>
+            )}
+          </div>
+        ) : (
+          <p className="text-lg">
+            There is no stress plan for {dog.name} yet. Ask your vet what to do for events like kennels, travel or
+            fireworks, then{" "}
+            <Link href="/dog" className={quietLink}>
+              add it in their words
+            </Link>
+            .
+          </p>
+        )}
+        {today.events.length > 0 && (
+          <ul className="flex flex-col gap-2">
+            {today.events.map((e) => (
+              <li key={e.id} className="flex flex-col gap-2 rounded-2xl border border-ink/30 p-4">
+                <p className="text-lg">
+                  {e.title}: {formatDate(e.startsOn)}
+                  {e.endsOn && ` to ${formatDate(e.endsOn)}`}
+                  {e.ongoing && e.endsOn
+                    ? ", on now."
+                    : e.daysUntil === 0
+                      ? ", today."
+                      : `, in ${e.daysUntil} day${e.daysUntil === 1 ? "" : "s"}.`}
+                </p>
+                {data.eventOwners[e.id] === input.me && (
+                  <form action={removeStressEvent}>
+                    <input type="hidden" name="event_id" value={e.id} />
+                    <button type="submit" className={quietLink}>
+                      Remove this event
+                    </button>
+                  </form>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+        <StressEventForm dogId={dog.id} today={today.date} />
+      </section>
     </>
   );
 }

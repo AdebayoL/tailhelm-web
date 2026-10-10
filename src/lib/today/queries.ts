@@ -7,7 +7,7 @@ import { signsType } from "@/lib/signs/signs";
 import { createClient } from "@/lib/supabase/server";
 import { getPack } from "@/packs/registry";
 import { type InjectionInfo, getInjectionInfo } from "@/lib/treatments/queries";
-import { type Tick, type TodayInput } from "./today";
+import { type PlannedEvent, type Tick, type TodayInput } from "./today";
 
 export type QuickCheck = {
   id: string;
@@ -23,6 +23,8 @@ export type TodayData = {
   injections: Record<string, InjectionInfo>;
   /** Today's quick checks on the owner's clock, latest first. */
   checks: QuickCheck[];
+  /** Who added each planned event, for the undo link. */
+  eventOwners: Record<string, string | null>;
 };
 
 /** The signed-in owner's time zone; every member sees the dog's day on their own clock. */
@@ -69,11 +71,14 @@ export async function getTodayData(): Promise<TodayData | null> {
     ticks: [],
     names,
   };
-  if (!plan) return { dog, plan, input, injections: {}, checks: [] };
+  const events = await getStressEvents(dog.id, timeZone, now);
+  input.events = events.map((e) => e.event);
+  const eventOwners = Object.fromEntries(events.map((e) => [e.event.id, e.recordedBy]));
+  if (!plan) return { dog, plan, input, injections: {}, checks: [], eventOwners };
   const signs = signsType(getPack(plan.condition.condition_key));
   const checks = signs ? await getQuickChecks(plan.condition.id, signs.key, timeZone, now) : [];
   if (plan.items.length === 0)
-    return { dog, plan, input, injections: {}, checks };
+    return { dog, plan, input, injections: {}, checks, eventOwners };
 
   const supabase = await createClient();
   const today = toLocal(now, timeZone).date;
@@ -114,7 +119,38 @@ export async function getTodayData(): Promise<TodayData | null> {
       anchoredOn: anchor.data.anchored_on,
       cycleNo: anchor.data.cycle_no,
     };
-  return { dog, plan, input, injections, checks };
+  return { dog, plan, input, injections, checks, eventOwners };
+}
+
+export const STRESS_EVENT_KIND = "stressful_event";
+
+/** Stressful events that end today or later, as dates on the owner's clock. */
+async function getStressEvents(
+  dogId: string,
+  timeZone: string,
+  now: Date,
+): Promise<{ event: PlannedEvent; recordedBy: string | null }[]> {
+  const supabase = await createClient();
+  const dayStart = zonedTimeToInstant(toLocal(now, timeZone).date, "00:00", timeZone).toISOString();
+  const { data, error } = await supabase
+    .from("events")
+    .select("id, note, started_at, ended_at, recorded_by")
+    .eq("dog_id", dogId)
+    .eq("kind", STRESS_EVENT_KIND)
+    .or(`started_at.gte.${dayStart},ended_at.gte.${dayStart}`)
+    .order("started_at");
+  if (error) throw new Error(`Could not load planned events: ${error.message}`);
+  return ((data ?? []) as { id: string; note: string | null; started_at: string; ended_at: string | null; recorded_by: string | null }[]).map(
+    (e) => ({
+      event: {
+        id: e.id,
+        title: e.note ?? "Stressful event",
+        startsOn: toLocal(new Date(e.started_at), timeZone).date,
+        endsOn: e.ended_at ? toLocal(new Date(e.ended_at), timeZone).date : null,
+      },
+      recordedBy: e.recorded_by,
+    }),
+  );
 }
 
 /** The quick checks saved since midnight on the owner's clock. */

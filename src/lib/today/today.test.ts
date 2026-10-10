@@ -209,6 +209,34 @@ describe("blood tests", () => {
   });
 });
 
+describe("stressful events", () => {
+  const ticks = [tick({}), tick({ id: "t2", slot: "20:00" })];
+  const kennels = { id: "e1", title: "Kennels", startsOn: "2026-10-15", endsOn: "2026-10-17" };
+
+  it("lists events still to come or happening, and drops past ones", () => {
+    const t = buildToday(base({ ticks, events: [kennels, { id: "e0", title: "Vet visit", startsOn: "2026-10-01", endsOn: null }] }));
+    expect(t.events).toEqual([{ ...kennels, ongoing: false, daysUntil: 6 }]);
+  });
+
+  it("shows the vet's plan in their words on the card", () => {
+    expect(nextActionText(buildToday(base({ ticks, events: [kennels] })).next, "Bella", formatDate, "Double the morning tablet.")).toEqual({
+      title: "Kennels on 15 Oct 2026, in 6 days.",
+      detail: "Your vet’s plan: Double the morning tablet.",
+    });
+  });
+
+  it("asks the owner to ask the vet when there is no plan", () => {
+    expect(text(base({ ticks, events: [{ ...kennels, startsOn: "2026-10-08" }] }))).toEqual({
+      title: "Kennels, until 17 Oct 2026.",
+      detail: "There is no stress plan for Bella yet. Ask your vet what to do for events like this.",
+    });
+  });
+
+  it("waits until the doses are ticked", () => {
+    expect(text(base({ events: [kennels] })).title).toBe("Bella’s Prednisolone, 08:00");
+  });
+});
+
 it("never uses the words Tailhelm avoids", () => {
   const cases = [
     base(),

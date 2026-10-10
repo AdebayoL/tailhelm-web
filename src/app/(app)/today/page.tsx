@@ -235,6 +235,9 @@ async function TodayContent() {
                   ))}
                 </ul>
               )}
+              <Link href="/trends" className={quietLink}>
+                Log a result
+              </Link>
             </div>
           ))}
         </section>

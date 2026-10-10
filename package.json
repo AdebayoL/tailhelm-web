@@ -14,9 +14,11 @@
     "pack:migration": "tsx scripts/pack-migration.ts"
   },
   "dependencies": {
+    "@sentry/nextjs": "11.6.0",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.117.3",
     "next": "16.4.0",
+    "posthog-js": "1.438.7",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "server-only": "^0.0.1",

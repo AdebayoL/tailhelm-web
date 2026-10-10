@@ -3,15 +3,18 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { TABS } from "@/lib/app/nav";
 import { telHref } from "@/lib/dogs/input";
+import { toLocal } from "@/engine/time";
 import { describePlanItem, formatDate } from "@/lib/plan/input";
 import { getTodayData } from "@/lib/today/queries";
 import { buildToday, nextActionText } from "@/lib/today/today";
+import { signsAlertText, signsRule, signsType } from "@/lib/signs/signs";
 import { discardDate, vialRule, vialWarning, vialWarningText } from "@/lib/treatments/vial";
 import { getPack } from "@/packs/registry";
 import { TabPage } from "../_components/tab-page";
-import { undoTick } from "./actions";
+import { undoQuickCheck, undoTick } from "./actions";
 import { DoseTick } from "./dose-tick";
 import { InjectionLog } from "./injection-log";
+import { QuickCheck } from "./quick-check";
 
 export const metadata: Metadata = { title: "Today · Tailhelm" };
 
@@ -57,7 +60,10 @@ async function TodayContent() {
   const { next } = today;
   const card = nextActionText(next, dog.name, formatDate);
   const overdue = next.kind === "overdue";
-  const vials = vialRule(getPack(plan.condition.condition_key));
+  const pack = getPack(plan.condition.condition_key);
+  const vials = vialRule(pack);
+  const signs = signsType(pack);
+  const signsAlert = signsRule(pack);
 
   return (
     <>
@@ -87,6 +93,49 @@ async function TodayContent() {
             </Link>
           ))}
       </section>
+
+      {signs && (
+        <section aria-labelledby="quick-check" className="flex flex-col gap-3">
+          <h2 id="quick-check" className="text-xl font-semibold">
+            Quick check
+          </h2>
+          {data.checks.map((c) => {
+            const keys = Object.keys(c.values_json);
+            const at = toLocal(new Date(c.taken_at), input.timeZone).time;
+            const who =
+              c.recorded_by === input.me
+                ? "you"
+                : ((c.recorded_by && input.names[c.recorded_by]) ?? "someone in the household");
+            const alert = signsAlert && signsAlertText(signsAlert, keys, signs, today.date, formatDate);
+            return (
+              <div
+                key={c.id}
+                className={`flex flex-col gap-2 rounded-2xl p-4 ${alert ? "border-2 border-alert-amber" : "border border-ink/30"}`}
+              >
+                <p className="text-lg">
+                  Saved at {at} by {who}:{" "}
+                  {keys.length === 0
+                    ? "nothing noticed."
+                    : `${signs.signs
+                        .filter((s) => keys.includes(s.key))
+                        .map((s) => s.label)
+                        .join(", ")}.`}
+                </p>
+                {alert && <p className="text-lg font-semibold">{alert}</p>}
+                {c.recorded_by === input.me && (
+                  <form action={undoQuickCheck}>
+                    <input type="hidden" name="observation_id" value={c.id} />
+                    <button type="submit" className={quietLink}>
+                      Undo this check
+                    </button>
+                  </form>
+                )}
+              </div>
+            );
+          })}
+          <QuickCheck conditionId={plan.condition.id} signs={signs.signs} />
+        </section>
+      )}
 
       {today.doses.length > 0 && (
         <section aria-labelledby="doses" className="flex flex-col gap-4">

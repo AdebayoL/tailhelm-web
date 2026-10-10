@@ -119,6 +119,37 @@ describe("parsePlanItemForm", () => {
     }
   });
 
+  it("keeps the vet's stress plan word for word, with no amount fields", () => {
+    const words = "Double the prednisolone the day before and the day of kennels. Call us if he stops eating.";
+    const r = parsePlanItemForm(
+      form({ pack_key: "stressful_event", vet_instructions: `  ${words} `, set_by_vet_on: "2026-09-12", dose_amount: "5", dose_unit: "mg" }),
+      "addisons",
+      "typical",
+    );
+    expect(r).toEqual({
+      ok: true,
+      value: {
+        pack_key: "stressful_event",
+        kind: "task",
+        product: "Stress plan",
+        strength: null,
+        dose_amount: null,
+        dose_unit: null,
+        schedule_kind: "event",
+        schedule_json: { kind: "event" },
+        usual_times: [],
+        set_by_vet_on: "2026-09-12",
+        vet_instructions: words,
+      },
+    });
+  });
+
+  it("needs the vet's words and the date they gave the plan", () => {
+    const r = parsePlanItemForm(form({ pack_key: "stressful_event", vet_instructions: " ", set_by_vet_on: "" }), "addisons", "typical");
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(Object.keys(r.errors).sort()).toEqual(["set_by_vet_on", "vet_instructions"]);
+  });
+
   it("refuses zero, negative and over-precise amounts", () => {
     for (const dose_amount of ["0", "-1", "1.2345", "1e3"]) {
       expect(parsePlanItemForm(form({ ...steroid, dose_amount }), "addisons", "typical").ok).toBe(false);

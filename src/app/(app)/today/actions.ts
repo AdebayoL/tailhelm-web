@@ -5,7 +5,12 @@ import { parsePlanSchedule } from "@/engine/schedule";
 import { toLocal, zonedTimeToInstant } from "@/engine/time";
 import { requireOwner } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
-import { getTimeZone, householdNames } from "@/lib/today/queries";
+import {
+  STRESS_EVENT_KIND,
+  getTimeZone,
+  householdNames,
+} from "@/lib/today/queries";
+import { parseStressEventForm } from "@/lib/events/input";
 import { parseSignsForm, signsType } from "@/lib/signs/signs";
 import { parseInjectionForm } from "@/lib/treatments/input";
 import { getPack } from "@/packs/registry";
@@ -268,6 +273,63 @@ export async function undoQuickCheck(form: FormData): Promise<void> {
     .eq("recorded_by", owner.userId);
   if (error)
     console.error("[today] undo quick check failed", {
+      code: error.code,
+      message: error.message,
+    });
+  refresh();
+}
+
+export type EventState = {
+  errors?: Record<string, string>;
+  failed?: boolean;
+  savedAt?: number;
+  values?: Record<string, string>;
+};
+
+/** Plans a stressful event, such as kennels, so Today can show the vet's plan ahead of it. */
+export async function addStressEvent(
+  _state: EventState,
+  form: FormData,
+): Promise<EventState> {
+  const owner = await requireOwner();
+  const values = Object.fromEntries(
+    [...form.entries()].filter(([, v]) => typeof v === "string"),
+  ) as Record<string, string>;
+  const parsed = parseStressEventForm(form);
+  if (!parsed.ok) return { errors: parsed.errors, values };
+  const timeZone = await getTimeZone(owner.userId);
+  const noon = (d: string) => zonedTimeToInstant(d, "12:00", timeZone).toISOString();
+  const supabase = await createClient();
+  const { error } = await supabase.from("events").insert({
+    dog_id: String(form.get("dog_id") ?? ""),
+    kind: STRESS_EVENT_KIND,
+    started_at: noon(parsed.value.starts_on),
+    ended_at: parsed.value.ends_on ? noon(parsed.value.ends_on) : null,
+    note: parsed.value.title,
+    capture_mode: "logged",
+  });
+  if (error) {
+    console.error("[today] add event failed", {
+      code: error.code,
+      message: error.message,
+    });
+    return { failed: true, values };
+  }
+  refresh();
+  return { savedAt: Date.now() };
+}
+
+/** Removes a planned event the signed-in person added. */
+export async function removeStressEvent(form: FormData): Promise<void> {
+  const owner = await requireOwner();
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("events")
+    .delete()
+    .eq("id", String(form.get("event_id") ?? ""))
+    .eq("recorded_by", owner.userId);
+  if (error)
+    console.error("[today] remove event failed", {
       code: error.code,
       message: error.message,
     });

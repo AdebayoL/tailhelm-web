@@ -2,10 +2,11 @@
 
 import { refresh } from "next/cache";
 import { parsePlanSchedule } from "@/engine/schedule";
-import { toLocal } from "@/engine/time";
+import { toLocal, zonedTimeToInstant } from "@/engine/time";
 import { requireOwner } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { getTimeZone, householdNames } from "@/lib/today/queries";
+import { parseInjectionForm } from "@/lib/treatments/input";
 
 export type TickState = {
   done?: boolean;
@@ -132,4 +133,82 @@ export async function undoTick(form: FormData): Promise<void> {
       message: error.message,
     });
   refresh();
+}
+
+export type InjectionState = {
+  errors?: Record<string, string>;
+  failed?: boolean;
+  savedAt?: number;
+  values?: Record<string, string>;
+};
+
+/**
+ * Logs an injection on a cycle and starts the next cycle from its date, in one
+ * step in the database. Refused if one is already logged on or after that date,
+ * so the same injection is never recorded twice.
+ */
+export async function logInjection(
+  _state: InjectionState,
+  form: FormData,
+): Promise<InjectionState> {
+  const owner = await requireOwner();
+  const supabase = await createClient();
+  const itemId = String(form.get("plan_item_id") ?? "");
+  const values = Object.fromEntries(
+    [...form.entries()].filter(([, v]) => typeof v === "string"),
+  ) as Record<string, string>;
+
+  const { data: last } = await supabase
+    .from("treatments")
+    .select("given_on")
+    .eq("plan_item_id", itemId)
+    .eq("slot", "injection")
+    .order("given_on", { ascending: false })
+    .limit(1)
+    .maybeSingle<{ given_on: string }>();
+
+  const timeZone = await getTimeZone(owner.userId);
+  const now = new Date();
+  const today = toLocal(now, timeZone).date;
+  const parsed = parseInjectionForm(form, {
+    today,
+    lastGivenOn: last?.given_on ?? null,
+  });
+  if (!parsed.ok) return { errors: parsed.errors, values };
+  const v = parsed.value;
+
+  // Today's injection is stamped now; an earlier one has no known time, so midday on its date.
+  const at =
+    v.given_on === today
+      ? now
+      : zonedTimeToInstant(v.given_on, "12:00", timeZone);
+  const { error } = await supabase.rpc("log_cycle_treatment", {
+    item: itemId,
+    on_date: v.given_on,
+    at: at.toISOString(),
+    amount: v.amount,
+    unit: v.unit,
+    given_by: v.given_by,
+    site: v.site,
+    note: v.note,
+    vial: v.vial && "id" in v.vial ? v.vial.id : null,
+    new_vial: v.vial && "new" in v.vial ? v.vial.new : null,
+  });
+  if (error) {
+    console.error("[today] log injection failed", {
+      code: error.code,
+      message: error.message,
+    });
+    if (error.code === "23514" || error.code === UNIQUE_VIOLATION) {
+      return {
+        errors: {
+          given_on: "An injection is already logged on or after that date.",
+        },
+        values,
+      };
+    }
+    return { failed: true, values };
+  }
+  refresh();
+  return { savedAt: Date.now() };
 }

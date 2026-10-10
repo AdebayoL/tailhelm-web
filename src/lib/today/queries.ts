@@ -4,9 +4,15 @@ import { requireOwner } from "@/lib/auth/session";
 import { type Dog, getMyDog } from "@/lib/dogs/queries";
 import { type DogPlan, getDogPlan } from "@/lib/plan/queries";
 import { createClient } from "@/lib/supabase/server";
+import { type InjectionInfo, getInjectionInfo } from "@/lib/treatments/queries";
 import { type Tick, type TodayInput } from "./today";
 
-export type TodayData = { dog: Dog; plan: DogPlan | null; input: TodayInput };
+export type TodayData = {
+  dog: Dog;
+  plan: DogPlan | null;
+  input: TodayInput;
+  injections: Record<string, InjectionInfo>;
+};
 
 /** The signed-in owner's time zone; every member sees the dog's day on their own clock. */
 export async function getTimeZone(userId: string): Promise<string> {
@@ -52,11 +58,15 @@ export async function getTodayData(): Promise<TodayData | null> {
     ticks: [],
     names,
   };
-  if (!plan || plan.items.length === 0) return { dog, plan, input };
+  if (!plan || plan.items.length === 0)
+    return { dog, plan, input, injections: {} };
 
   const supabase = await createClient();
   const today = toLocal(now, timeZone).date;
-  const [ticks, anchor] = await Promise.all([
+  const intervalIds = plan.items
+    .filter((i) => i.schedule_json.kind === "interval")
+    .map((i) => i.id);
+  const [ticks, anchor, injections] = await Promise.all([
     supabase
       .from("treatments")
       .select(
@@ -75,6 +85,7 @@ export async function getTodayData(): Promise<TodayData | null> {
       .order("cycle_no", { ascending: false })
       .limit(1)
       .maybeSingle<{ anchored_on: string; cycle_no: number }>(),
+    getInjectionInfo(intervalIds),
   ]);
   if (ticks.error)
     throw new Error(`Could not load today's ticks: ${ticks.error.message}`);
@@ -89,5 +100,5 @@ export async function getTodayData(): Promise<TodayData | null> {
       anchoredOn: anchor.data.anchored_on,
       cycleNo: anchor.data.cycle_no,
     };
-  return { dog, plan, input };
+  return { dog, plan, input, injections };
 }

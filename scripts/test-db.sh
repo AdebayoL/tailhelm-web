@@ -17,6 +17,6 @@ for migration in supabase/migrations/*.sql; do
 done
 for test in supabase/tests/*.test.sql; do
   echo "• $test"
-  "${PSQL[@]}" "$TEST_URL" -f "$test"
+  "${PSQL[@]}" "$TEST_URL" -c "begin" -f "$test" -c "rollback"  # each test starts from the same empty database
 done
 echo "✓ database tests passed"

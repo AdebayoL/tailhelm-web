@@ -72,7 +72,7 @@ describe("parsePlanItemForm", () => {
 
   it("offers only the medicines the pack lists for the dog's variant", () => {
     const r = parsePlanItemForm(form({ ...steroid, pack_key: "docp", every_days: "28", time: "09:00" }), "addisons", "atypical");
-    expect(r).toEqual({ ok: false, errors: { pack_key: "Choose a medicine." } });
+    expect(r).toEqual({ ok: false, errors: { pack_key: "Choose what to add." } });
   });
 
   it("needs an amount, a unit, a date the vet set it and a time", () => {
@@ -84,6 +84,38 @@ describe("parsePlanItemForm", () => {
     expect(r.ok).toBe(false);
     if (!r.ok) {
       expect(Object.keys(r.errors).sort()).toEqual(["dose_amount", "dose_unit", "product", "set_by_vet_on", "times"]);
+    }
+  });
+
+  it("reads the blood-test days the vet set, with no amount", () => {
+    const r = parsePlanItemForm(
+      form({ pack_key: "electrolytes_after_injection", offsets_days: "25, 10 and 10", time: "09:00", set_by_vet_on: "2026-09-12", dose_amount: "5" }),
+      "addisons",
+      "typical",
+    );
+    expect(r).toEqual({
+      ok: true,
+      value: {
+        pack_key: "electrolytes_after_injection",
+        kind: "observation",
+        product: "Sodium and potassium blood test",
+        strength: null,
+        dose_amount: null,
+        dose_unit: null,
+        schedule_kind: "offset",
+        schedule_json: { kind: "offset", offsetsDays: [10, 25], time: "09:00" },
+        usual_times: ["09:00"],
+        set_by_vet_on: "2026-09-12",
+        vet_instructions: null,
+      },
+    });
+  });
+
+  it("needs the blood-test days, a reminder time and the date the vet asked", () => {
+    for (const offsets_days of ["", "ten", "0", "400", "10.5"]) {
+      const r = parsePlanItemForm(form({ pack_key: "electrolytes_after_injection", offsets_days, time: "", set_by_vet_on: "" }), "addisons", "typical");
+      expect(r.ok).toBe(false);
+      if (!r.ok) expect(Object.keys(r.errors).sort()).toEqual(["offsets_days", "set_by_vet_on", "time"]);
     }
   });
 

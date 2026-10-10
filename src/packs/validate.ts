@@ -108,6 +108,11 @@ export function validatePack(rawPack: unknown, rawRegister: unknown): Issue[] {
   }
   pack.definitions.forEach((d, i) => checkCitations(d.citations, `$.definitions[${i}]`, true));
   pack.conflicts.forEach((c, i) => checkCitations(c.citations, `$.conflicts[${i}]`));
+  pack.changelog?.forEach((entry, i) => {
+    for (const id of entry.sourceIds) {
+      if (!sources.has(id)) issues.push({ path: `$.changelog[${i}]`, message: `Names "${id}", which is not in the source register` });
+    }
+  });
 
   // Schedule shapes.
   const anchors = pack.medicines.filter((m) => m.setsAnchor);

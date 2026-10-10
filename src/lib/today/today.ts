@@ -66,10 +66,26 @@ export type Countdown = {
   daysUntil: number | null;
 };
 
+/** One test the vet asked for on a set day after the latest injection. */
+export type TestDate = {
+  item: TodayItem;
+  /** Days after the injection, as the vet set it. */
+  day: number;
+  dueOn: LocalDate;
+  daysUntil: number;
+};
+
+export type TestPlan = {
+  item: TodayItem;
+  /** The dates still to come in this cycle; null until an injection is logged. */
+  upcoming: TestDate[] | null;
+};
+
 export type NextAction =
   | { kind: "overdue"; countdown: Countdown }
   | { kind: "dose"; dose: DoseSlot }
   | { kind: "soon"; countdown: Countdown }
+  | { kind: "test"; test: TestDate }
   | { kind: "clear"; allTicked: boolean };
 
 export type TodayInput = {
@@ -87,6 +103,7 @@ export type Today = {
   date: LocalDate;
   doses: DoseSlot[];
   countdowns: Countdown[];
+  tests: TestPlan[];
   next: NextAction;
 };
 
@@ -110,6 +127,7 @@ export function buildToday(input: TodayInput): Today {
 
   const doses: DoseSlot[] = [];
   const countdowns: Countdown[] = [];
+  const tests: TestPlan[] = [];
   for (const item of input.items) {
     const schedule = item.schedule_json;
     if (schedule.kind === "fixed") {
@@ -141,15 +159,29 @@ export function buildToday(input: TodayInput): Today {
         dueOn: next?.localDate ?? null,
         daysUntil: next ? daysBetween(date, next.localDate) : null,
       });
+    } else if (schedule.kind === "offset") {
+      const anchor = input.latestAnchor;
+      tests.push({
+        item,
+        upcoming: anchor
+          ? [...new Set(schedule.offsetsDays)]
+              .sort((a, b) => a - b)
+              .map((day) => {
+                const dueOn = addDays(anchor.anchoredOn, day);
+                return { item, day, dueOn, daysUntil: daysBetween(date, dueOn) };
+              })
+              .filter((t) => t.daysUntil >= 0)
+          : null,
+      });
     }
   }
   doses.sort((a, b) => a.dueAt.getTime() - b.dueAt.getTime());
 
-  return { date, doses, countdowns, next: nextAction(doses, countdowns) };
+  return { date, doses, countdowns, tests, next: nextAction(doses, countdowns, tests) };
 }
 
 /** The spec's priority order, for the items this screen knows about so far. */
-function nextAction(doses: DoseSlot[], countdowns: Countdown[]): NextAction {
+function nextAction(doses: DoseSlot[], countdowns: Countdown[], tests: TestPlan[]): NextAction {
   const dated = countdowns
     .filter((c) => c.daysUntil !== null)
     .sort((a, b) => a.daysUntil! - b.daysUntil!);
@@ -159,6 +191,11 @@ function nextAction(doses: DoseSlot[], countdowns: Countdown[]): NextAction {
   if (dose) return { kind: "dose", dose };
   const soon = dated.find((c) => c.daysUntil! <= SOON_DAYS);
   if (soon) return { kind: "soon", countdown: soon };
+  const test = tests
+    .flatMap((t) => t.upcoming ?? [])
+    .sort((a, b) => a.daysUntil - b.daysUntil)
+    .find((t) => t.daysUntil <= SOON_DAYS);
+  if (test) return { kind: "test", test };
   return { kind: "clear", allTicked: doses.length > 0 };
 }
 
@@ -197,6 +234,17 @@ export function nextActionText(
           daysUntil === 0
             ? `${name(item, "injection")} is due today.`
             : `${name(item, "injection")} is due in ${plural(daysUntil!, "day")}, on ${formatDate(dueOn!)}.`,
+        detail: null,
+      };
+    }
+    case "test": {
+      const { item, day, dueOn, daysUntil } = next.test;
+      const what = `${item.product ?? "Blood test"} for ${dogName}`;
+      return {
+        title:
+          daysUntil === 0
+            ? `${what} around today, as your vet asked.`
+            : `${what} around day ${day} after the injection: ${formatDate(dueOn)}, in ${plural(daysUntil, "day")}.`,
         detail: null,
       };
     }

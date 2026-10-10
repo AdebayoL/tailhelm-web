@@ -37,11 +37,11 @@ export function parseConditionForm(form: FormData): { ok: true; value: Condition
 
 export type PlanItemInput = {
   pack_key: string;
-  kind: "medicine";
+  kind: "medicine" | "observation";
   product: string;
   strength: string | null;
-  dose_amount: number;
-  dose_unit: (typeof DOSE_UNITS)[number];
+  dose_amount: number | null;
+  dose_unit: (typeof DOSE_UNITS)[number] | null;
   schedule_kind: PlanSchedule["kind"];
   schedule_json: PlanSchedule;
   usual_times: string[];
@@ -49,15 +49,52 @@ export type PlanItemInput = {
   vet_instructions: string | null;
 };
 
-/** Reads one medicine from the plan form, checked against the medicines the pack lists for the dog's variant. */
+export type PlanOption = {
+  key: string;
+  kind: "medicine" | "observation";
+  name: string;
+  scheduleKind: PlanSchedule["kind"];
+  /** The pack's own description, shown as a hint. */
+  hint: string | null;
+};
+
+/**
+ * What the owner can add to the plan: the medicines the pack lists for the
+ * dog's variant, and the tests it times from an injection. The pack names
+ * each one; the owner enters every number from their vet.
+ */
+export function planOptions(conditionKey: string, variant: string | null): PlanOption[] {
+  const pack = getPack(conditionKey);
+  if (!pack) return [];
+  const medicines: PlanOption[] = medicinesFor(pack, variant).map((m) => ({
+    key: m.key,
+    kind: "medicine",
+    name: m.name,
+    scheduleKind: m.scheduleKind,
+    hint: null,
+  }));
+  const tests: PlanOption[] = pack.monitoringRules
+    .filter((r) => r.scheduleKind === "offset")
+    .map((r) => ({
+      key: r.key,
+      kind: "observation",
+      name: pack.observationTypes.find((o) => o.key === r.observationType)?.name ?? r.description,
+      scheduleKind: "offset",
+      hint: r.description,
+    }));
+  return [...medicines, ...tests];
+}
+
+/** Reads one plan item from the form, checked against what the pack lists for the dog's variant. */
 export function parsePlanItemForm(
   form: FormData,
   conditionKey: string,
   variant: string | null,
 ): { ok: true; value: PlanItemInput } | { ok: false; errors: FieldErrors } {
-  const pack = getPack(conditionKey);
-  const medicine = pack && medicinesFor(pack, variant).find((m) => m.key === form.get("pack_key"));
-  if (!medicine) return { ok: false, errors: { pack_key: "Choose a medicine." } };
+  const option = planOptions(conditionKey, variant).find((o) => o.key === form.get("pack_key"));
+  if (!option) return { ok: false, errors: { pack_key: "Choose what to add." } };
+  if (option.kind === "observation") return parseTestItem(form, option);
+  const medicine = option;
 
   const errors: FieldErrors = {};
   const product = text(80).safeParse(form.get("product") ?? "");
@@ -99,6 +136,33 @@ export function parsePlanItemForm(
   };
 }
 
+/** A test the vet asked for on set days after each injection. No amount: only the days and a reminder time. */
+function parseTestItem(form: FormData, option: PlanOption): { ok: true; value: PlanItemInput } | { ok: false; errors: FieldErrors } {
+  const errors: FieldErrors = {};
+  const setOn = String(form.get("set_by_vet_on") ?? "").trim();
+  if (!isLocalDate(setOn) || setOn > today()) errors.set_by_vet_on = "Enter the date your vet asked for these tests.";
+  const instructions = text(500).safeParse(form.get("vet_instructions") ?? "");
+  if (!instructions.success) errors.vet_instructions = "Use 500 characters or fewer.";
+  const schedule = readSchedule(form, option.scheduleKind, errors);
+  if (Object.keys(errors).length > 0 || !schedule) return { ok: false, errors };
+  return {
+    ok: true,
+    value: {
+      pack_key: option.key,
+      kind: "observation",
+      product: option.name,
+      strength: null,
+      dose_amount: null,
+      dose_unit: null,
+      schedule_kind: schedule.kind,
+      schedule_json: schedule,
+      usual_times: schedule.kind === "offset" ? [schedule.time] : [],
+      set_by_vet_on: setOn,
+      vet_instructions: instructions.success && instructions.data !== "" ? instructions.data : null,
+    },
+  };
+}
+
 function readSchedule(form: FormData, kind: PlanSchedule["kind"], errors: FieldErrors): PlanSchedule | null {
   if (kind === "fixed") {
     const times = form
@@ -123,7 +187,20 @@ function readSchedule(form: FormData, kind: PlanSchedule["kind"], errors: FieldE
     const parsed = parsePlanSchedule({ kind, everyDays, time }, kind);
     return parsed.ok ? parsed.schedule : null;
   }
-  errors.pack_key = "This medicine can't be added here yet.";
+  if (kind === "offset") {
+    const raw = String(form.get("offsets_days") ?? "").trim();
+    const parts = raw.replace(/\band\b/gi, " ").split(/[\s,]+/).filter((p) => p !== "");
+    const days = parts.map(Number);
+    const time = String(form.get("time") ?? "").trim();
+    if (days.length === 0 || !parts.every((p) => /^\d{1,3}$/.test(p)) || days.some((d) => d < 1 || d > 366)) {
+      errors.offsets_days = "Enter the days after the injection your vet gave you, such as 10, 25.";
+    }
+    if (!isLocalTime(time)) errors.time = "Enter a time for the reminder, such as 09:00.";
+    if (errors.offsets_days || errors.time) return null;
+    const parsed = parsePlanSchedule({ kind, offsetsDays: [...new Set(days)].sort((a, b) => a - b), time }, kind);
+    return parsed.ok ? parsed.schedule : null;
+  }
+  errors.pack_key = "This can't be added here yet.";
   return null;
 }
 

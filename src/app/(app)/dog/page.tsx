@@ -3,10 +3,10 @@ import { Suspense } from "react";
 import { TABS } from "@/lib/app/nav";
 import { requireOwner } from "@/lib/auth/session";
 import { getMyDog } from "@/lib/dogs/queries";
-import { describePlanItem, formatDate } from "@/lib/plan/input";
+import { describePlanItem, formatDate, planOptions } from "@/lib/plan/input";
 import { getDogPlan } from "@/lib/plan/queries";
 import { CONDITION_NAMES } from "@/packs/pack-sql";
-import { getPack, medicinesFor } from "@/packs/registry";
+import { getPack } from "@/packs/registry";
 import { signOut } from "../../sign-in/actions";
 import { TabPage } from "../_components/tab-page";
 import { ConditionForm } from "./condition-form";
@@ -71,7 +71,7 @@ async function Plan() {
 
   const { condition, items } = plan;
   const labelled = items.map((item) => ({ item, label: describePlanItem(item) }));
-  const medicines = medicinesFor(pack, condition.variant).map((m) => ({ key: m.key, name: m.name, scheduleKind: m.scheduleKind }));
+  const options = planOptions(condition.condition_key, condition.variant);
 
   return (
     <section className="flex flex-col gap-4 border-t border-sand pt-6">
@@ -82,7 +82,7 @@ async function Plan() {
         {condition.diagnosed_on && `, diagnosed ${formatDate(condition.diagnosed_on)}`}.
       </p>
       {labelled.length === 0 ? (
-        <p className="text-lg">No medicines yet. Add each one as your vet prescribed it.</p>
+        <p className="text-lg">Nothing on the plan yet. Add each medicine as your vet prescribed it.</p>
       ) : (
         <ul className="flex flex-col gap-3">
           {labelled.map(({ item, label }) => (
@@ -94,11 +94,11 @@ async function Plan() {
           ))}
         </ul>
       )}
-      <h3 className="pt-2 text-lg font-semibold">Add a medicine</h3>
-      <p className="text-base">Enter it exactly as your vet prescribed it. To change an amount, add it again with the new date.</p>
+      <h3 className="pt-2 text-lg font-semibold">Add to the plan</h3>
+      <p className="text-base">Enter each medicine or test exactly as your vet set it. To change something, add it again with the new date.</p>
       <PlanItemForm
         conditionId={condition.id}
-        medicines={medicines}
+        options={options}
         activeItems={labelled.map(({ item, label }) => ({ id: item.id, pack_key: item.pack_key, label }))}
       />
     </section>

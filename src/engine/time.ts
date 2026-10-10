@@ -43,6 +43,17 @@ export function daysBetween(from: LocalDate, to: LocalDate): number {
   return Math.round((Date.UTC(ty, tm - 1, td) - Date.UTC(fy, fm - 1, fd)) / DAY_MS);
 }
 
+/**
+ * The same day of the month, `months` calendar months later. When that month
+ * is shorter, the last day of it: 31 Oct plus 4 months is 28 Feb (29 in a
+ * leap year), never a day in March.
+ */
+export function addMonths(date: LocalDate, months: number): LocalDate {
+  const [y, m, d] = dateParts(date);
+  const lastDay = new Date(Date.UTC(y, m - 1 + months + 1, 0)).getUTCDate();
+  return new Date(Date.UTC(y, m - 1 + months, Math.min(d, lastDay))).toISOString().slice(0, 10);
+}
+
 const formatters = new Map<string, Intl.DateTimeFormat>();
 
 function formatter(timeZone: string): Intl.DateTimeFormat {

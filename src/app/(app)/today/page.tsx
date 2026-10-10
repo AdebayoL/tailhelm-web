@@ -6,6 +6,8 @@ import { telHref } from "@/lib/dogs/input";
 import { describePlanItem, formatDate } from "@/lib/plan/input";
 import { getTodayData } from "@/lib/today/queries";
 import { buildToday, nextActionText } from "@/lib/today/today";
+import { discardDate, vialRule, vialWarning, vialWarningText } from "@/lib/treatments/vial";
+import { getPack } from "@/packs/registry";
 import { TabPage } from "../_components/tab-page";
 import { undoTick } from "./actions";
 import { DoseTick } from "./dose-tick";
@@ -55,6 +57,7 @@ async function TodayContent() {
   const { next } = today;
   const card = nextActionText(next, dog.name, formatDate);
   const overdue = next.kind === "overdue";
+  const vials = vialRule(getPack(plan.condition.condition_key));
 
   return (
     <>
@@ -132,6 +135,8 @@ async function TodayContent() {
               vials: [],
             };
             const last = info.last;
+            const lastVial = last?.vial_id ? info.vials.find((v) => v.id === last.vial_id) : undefined;
+            const warning = vialWarning(lastVial?.opened_on ?? null, vials, today.date);
             const by = last
               ? (last.given_by ??
                 (last.given_by_profile === input.me
@@ -178,6 +183,11 @@ async function TodayContent() {
                     )}
                   </div>
                 )}
+                {warning && vials && (
+                  <p role="status" className="rounded-xl border-2 border-alert-amber p-3 text-lg">
+                    {vialWarningText(warning, vials, formatDate)}
+                  </p>
+                )}
                 <InjectionLog
                   planItemId={c.item.id}
                   product={c.item.product ?? "injection"}
@@ -189,6 +199,7 @@ async function TodayContent() {
                     label: [
                       v.batch ? `Batch ${v.batch}` : "Vial",
                       v.opened_on && `opened ${formatDate(v.opened_on)}`,
+                      v.opened_on && vials && `use by ${formatDate(discardDate(v.opened_on, vials))}`,
                       v.expires_on && `expires ${formatDate(v.expires_on)}`,
                     ]
                       .filter(Boolean)
@@ -198,6 +209,34 @@ async function TodayContent() {
               </div>
             );
           })}
+        </section>
+      )}
+
+      {today.tests.length > 0 && (
+        <section aria-labelledby="tests" className="flex flex-col gap-3">
+          <h2 id="tests" className="text-xl font-semibold">
+            Blood tests
+          </h2>
+          {today.tests.map((t) => (
+            <div key={t.item.id} className="flex flex-col gap-2 rounded-2xl border border-ink/30 p-4">
+              <p className="text-xl font-semibold">{t.item.product}</p>
+              <p className="text-base">{describePlanItem(plan.items.find((i) => i.id === t.item.id)!)}</p>
+              {t.upcoming === null ? (
+                <p className="text-lg">The dates show once an injection is logged.</p>
+              ) : t.upcoming.length === 0 ? (
+                <p className="text-lg">No more tests in this cycle. The next dates show once the next injection is logged.</p>
+              ) : (
+                <ul className="flex flex-col gap-1">
+                  {t.upcoming.map((d) => (
+                    <li key={d.day} className="text-lg">
+                      Around day {d.day}: {formatDate(d.dueOn)}
+                      {d.daysUntil === 0 ? ", today" : `, in ${d.daysUntil} day${d.daysUntil === 1 ? "" : "s"}`}.
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          ))}
         </section>
       )}
     </>

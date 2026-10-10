@@ -81,6 +81,20 @@ with undone as (delete from public.treatments where id = :'second' returning 1)
 select pg_temp.expect(count(*), 1, 'the person who logged it can undo it') from undone;
 select pg_temp.expect((select max(cycle_no) from public.anchors), 1, 'undoing it removes its cycle too');
 
+-- Blood tests the vet asked for sit on the plan with their days and no amount.
+insert into public.plan_items (dog_condition_id, pack_key, kind, product, schedule_kind, schedule_json, usual_times, set_by_vet_on)
+  values (:'cond', 'electrolytes_after_injection', 'observation', 'Sodium and potassium blood test', 'offset',
+          '{"kind":"offset","offsetsDays":[10,25],"time":"09:00"}', '{09:00}', '2026-09-12');
+select pg_temp.expect((select count(*) from public.plan_items where kind = 'observation'), 1,
+  'a member can add the blood tests their vet asked for');
+
+-- A condition can be recorded against the newer pack version.
+select public.create_dog('Rosie') as rosie \gset
+insert into public.dog_conditions (dog_id, condition_key, pack_version, variant)
+  values (:'rosie', 'addisons', '0.2.0', 'typical');
+select pg_temp.expect((select count(*) from public.dog_conditions where pack_version = '0.2.0'), 1,
+  'a condition can use Addison''s pack 0.2.0');
+
 select pg_temp.act_as(:carol);
 select pg_temp.expect_error(
   format($$select public.log_cycle_treatment(%L, '2026-11-20', now(), 0.9, 'mL')$$, :'docp'),

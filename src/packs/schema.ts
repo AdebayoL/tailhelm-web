@@ -128,6 +128,8 @@ export const AlertRule = z.object({
   level: z.enum(["amber", "red"]),
   description: z.string().min(1),
   ownerWording: z.string().min(1),
+  /** For a vial rule: the calendar months an opened vial may be used for, as the cited label states. */
+  useWithinMonthsOfOpening: z.int().positive().optional(),
   ...cited,
 });
 
@@ -161,9 +163,18 @@ export const Attestation = z.object({
   templateVersion: z.string().min(1),
 });
 
+/** What changed in a pack version, and the source that prompted it. */
+export const ChangelogEntry = z.object({
+  version: z.string().regex(/^\d+\.\d+\.\d+$/),
+  date: z.iso.date(),
+  change: z.string().min(1),
+  sourceIds: z.array(z.string().min(1)).min(1),
+});
+
 export const ConditionPack = z.object({
   condition: Key,
   version: z.string().regex(/^\d+\.\d+\.\d+$/),
+  changelog: z.array(ChangelogEntry).optional(),
   status: z.enum(["draft", "attested", "published"]),
   variants: z.array(Key).min(1),
   medicines: z.array(Medicine),

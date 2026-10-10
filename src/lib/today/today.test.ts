@@ -163,6 +163,52 @@ describe("injection countdown", () => {
   });
 });
 
+describe("blood tests", () => {
+  const bloods = {
+    id: "bloods",
+    product: "Sodium and potassium blood test",
+    schedule_json: { kind: "offset" as const, offsetsDays: [25, 10], time: "09:00" },
+  };
+  const ticks = [tick({}), tick({ id: "t2", slot: "20:00" })];
+  const withBloods = (anchoredOn?: string) =>
+    base({
+      items: [pred, docp, bloods],
+      ticks,
+      latestAnchor: anchoredOn ? { anchoredOn, cycleNo: 2 } : undefined,
+    });
+
+  it("has no dates until an injection has been logged", () => {
+    expect(buildToday(withBloods()).tests).toEqual([{ item: bloods, upcoming: null }]);
+  });
+
+  it("dates each test from the latest injection, on the days the vet set", () => {
+    expect(buildToday(withBloods("2026-10-01")).tests[0].upcoming).toEqual([
+      { item: bloods, day: 10, dueOn: "2026-10-11", daysUntil: 2 },
+      { item: bloods, day: 25, dueOn: "2026-10-26", daysUntil: 17 },
+    ]);
+  });
+
+  it("drops a test date once it has passed", () => {
+    expect(buildToday(withBloods("2026-09-20")).tests[0].upcoming).toEqual([
+      { item: bloods, day: 25, dueOn: "2026-10-15", daysUntil: 6 },
+    ]);
+  });
+
+  it("puts a test within 7 days on the card after the doses", () => {
+    expect(text(withBloods("2026-10-01")).title).toBe(
+      "Sodium and potassium blood test for Bella around day 10 after the injection: 11 Oct 2026, in 2 days.",
+    );
+    expect(text(withBloods("2026-09-29")).title).toBe(
+      "Sodium and potassium blood test for Bella around today, as your vet asked.",
+    );
+    expect(text({ ...withBloods("2026-10-01"), ticks: [] }).title).toBe("Bella’s Prednisolone, 08:00");
+  });
+
+  it("puts an injection due soon above a test", () => {
+    expect(text(withBloods("2026-09-14")).title).toBe("Bella’s Zycortal is due in 3 days, on 12 Oct 2026.");
+  });
+});
+
 it("never uses the words Tailhelm avoids", () => {
   const cases = [
     base(),

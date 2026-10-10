@@ -1,14 +1,13 @@
 "use client";
 
 import { type ReactNode, useActionState, useState } from "react";
-import { DOSE_UNITS } from "@/lib/plan/input";
+import { DOSE_UNITS, type PlanOption } from "@/lib/plan/input";
 import { addPlanItem, type PlanFormState } from "./plan-actions";
 
 const field =
   "w-full rounded-lg border border-ink/30 bg-paper px-4 py-3 text-lg focus:border-green focus:outline-2 focus:outline-green";
 const primary = "min-h-12 w-full rounded-lg bg-green px-4 py-3 text-lg font-semibold text-paper disabled:opacity-60";
 
-export type MedicineOption = { key: string; name: string; scheduleKind: string };
 export type ActiveItem = { id: string; pack_key: string; label: string };
 
 const TIME_SLOTS = 4;
@@ -48,16 +47,17 @@ function Field({
 
 export function PlanItemForm({
   conditionId,
-  medicines,
+  options,
   activeItems,
 }: {
   conditionId: string;
-  medicines: MedicineOption[];
+  options: PlanOption[];
   activeItems: ActiveItem[];
 }) {
   const [state, action, pending] = useActionState<PlanFormState, FormData>(addPlanItem, {});
   const [medicineKey, setMedicineKey] = useState(state.values?.pack_key ?? "");
-  const medicine = medicines.find((m) => m.key === medicineKey);
+  const medicine = options.find((m) => m.key === medicineKey);
+  const isTest = medicine?.kind === "observation";
   const replaceable = activeItems.filter((i) => i.pack_key === medicineKey);
   const err = (name: string) => state.errors?.[name];
   const was = (name: string) => state.values?.[name] ?? "";
@@ -68,7 +68,7 @@ export function PlanItemForm({
   return (
     <form action={action} className="flex flex-col gap-5" noValidate>
       <input type="hidden" name="dog_condition_id" value={conditionId} />
-      <Field name="pack_key" error={err("pack_key")} label="Medicine">
+      <Field name="pack_key" error={err("pack_key")} label="What to add">
         <select
           id="pack_key"
           name="pack_key"
@@ -79,7 +79,7 @@ export function PlanItemForm({
           className={field}
         >
           <option value="">Choose…</option>
-          {medicines.map((m) => (
+          {options.map((m) => (
             <option key={m.key} value={m.key}>
               {m.name}
             </option>
@@ -87,39 +87,45 @@ export function PlanItemForm({
         </select>
       </Field>
 
+      {medicine?.hint && <p className="text-base">The published guidance says: {medicine.hint}.</p>}
+
       {medicine && (
         <>
-          <Field name="product" error={err("product")} label="Name on the label" hint="For example Prednisolone or Zycortal.">
-            <input id="product" name="product" defaultValue={was("product")} type="text" autoComplete="off" aria-describedby={described("product", true)} className={field} />
-          </Field>
-          <Field name="strength" error={err("strength")} label="Strength on the label (optional)" hint="For example 5 mg tablets.">
-            <input id="strength" name="strength" defaultValue={was("strength")} type="text" autoComplete="off" aria-describedby={described("strength", true)} className={field} />
-          </Field>
-          <div className="grid grid-cols-2 gap-3">
-            <Field name="dose_amount" error={err("dose_amount")} label="Amount your vet set">
-              <input
-                id="dose_amount"
-                name="dose_amount"
-                defaultValue={was("dose_amount")}
-                type="text"
-                inputMode="decimal"
-                autoComplete="off"
-                aria-invalid={err("dose_amount") ? true : undefined}
-                aria-describedby={described("dose_amount")}
-                className={field}
-              />
-            </Field>
-            <Field name="dose_unit" error={err("dose_unit")} label="Unit">
-              <select id="dose_unit" name="dose_unit" defaultValue={was("dose_unit")} aria-describedby={described("dose_unit")} className={field}>
-                <option value="">Choose…</option>
-                {DOSE_UNITS.map((u) => (
-                  <option key={u} value={u}>
-                    {u}
-                  </option>
-                ))}
-              </select>
-            </Field>
-          </div>
+          {!isTest && (
+            <>
+              <Field name="product" error={err("product")} label="Name on the label" hint="For example Prednisolone or Zycortal.">
+                <input id="product" name="product" defaultValue={was("product")} type="text" autoComplete="off" aria-describedby={described("product", true)} className={field} />
+              </Field>
+              <Field name="strength" error={err("strength")} label="Strength on the label (optional)" hint="For example 5 mg tablets.">
+                <input id="strength" name="strength" defaultValue={was("strength")} type="text" autoComplete="off" aria-describedby={described("strength", true)} className={field} />
+              </Field>
+              <div className="grid grid-cols-2 gap-3">
+                <Field name="dose_amount" error={err("dose_amount")} label="Amount your vet set">
+                  <input
+                    id="dose_amount"
+                    name="dose_amount"
+                    defaultValue={was("dose_amount")}
+                    type="text"
+                    inputMode="decimal"
+                    autoComplete="off"
+                    aria-invalid={err("dose_amount") ? true : undefined}
+                    aria-describedby={described("dose_amount")}
+                    className={field}
+                  />
+                </Field>
+                <Field name="dose_unit" error={err("dose_unit")} label="Unit">
+                  <select id="dose_unit" name="dose_unit" defaultValue={was("dose_unit")} aria-describedby={described("dose_unit")} className={field}>
+                    <option value="">Choose…</option>
+                    {DOSE_UNITS.map((u) => (
+                      <option key={u} value={u}>
+                        {u}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+              </div>
+            </>
+          )}
 
           {medicine.scheduleKind === "fixed" && (
             <fieldset className="flex flex-col gap-2" aria-describedby={described("times")}>
@@ -149,7 +155,18 @@ export function PlanItemForm({
             </div>
           )}
 
-          <Field name="set_by_vet_on" error={err("set_by_vet_on")} label="Date your vet set this">
+          {medicine.scheduleKind === "offset" && (
+            <div className="grid grid-cols-2 gap-3">
+              <Field name="offsets_days" error={err("offsets_days")} label="Days after each injection">
+                <input id="offsets_days" name="offsets_days" defaultValue={was("offsets_days")} type="text" inputMode="numeric" autoComplete="off" placeholder="For example 10, 25" aria-describedby={described("offsets_days")} className={field} />
+              </Field>
+              <Field name="time" error={err("time")} label="Reminder time">
+                <input id="time" name="time" defaultValue={was("time") || "09:00"} type="time" aria-describedby={described("time")} className={field} />
+              </Field>
+            </div>
+          )}
+
+          <Field name="set_by_vet_on" error={err("set_by_vet_on")} label={isTest ? "Date your vet asked for these" : "Date your vet set this"}>
             <input id="set_by_vet_on" name="set_by_vet_on" defaultValue={was("set_by_vet_on")} type="date" aria-describedby={described("set_by_vet_on")} className={field} />
           </Field>
           <Field name="vet_instructions" error={err("vet_instructions")} label="Your vet's instructions (optional)" hint="Copy them as your vet wrote them.">

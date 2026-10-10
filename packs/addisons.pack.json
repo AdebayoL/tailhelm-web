@@ -1,6 +1,17 @@
 {
   "condition": "addisons",
-  "version": "0.1.0",
+  "version": "0.2.0",
+  "changelog": [
+    {
+      "version": "0.2.0",
+      "date": "2026-10-10",
+      "change": "The opened-vial rule now carries its 4 calendar months as a number, so the app can work out the use-by date from the date the vial was opened.",
+      "sourceIds": [
+        "vmd-spc-zycortal",
+        "vmd-labelling-zycortal"
+      ]
+    }
+  ],
   "status": "draft",
   "variants": [
     "typical",
@@ -318,6 +329,7 @@
       "level": "amber",
       "description": "An opened Zycortal vial reaches 4 calendar months from the date it was opened",
       "ownerWording": "This vial was opened on {opened_on}. The label says use within 4 months of opening, which is {use_by}. Contact your vet about a new vial.",
+      "useWithinMonthsOfOpening": 4,
       "citations": [
         {
           "sourceId": "vmd-spc-zycortal",

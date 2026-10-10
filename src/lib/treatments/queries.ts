@@ -9,6 +9,7 @@ export type LastInjection = {
   given_by: string | null;
   given_by_profile: string | null;
   site: string | null;
+  vial_id: string | null;
 };
 
 export type Vial = {
@@ -33,7 +34,7 @@ export async function getInjectionInfo(
     supabase
       .from("treatments")
       .select(
-        "id, plan_item_id, given_on, amount, unit, given_by, given_by_profile, site",
+        "id, plan_item_id, given_on, amount, unit, given_by, given_by_profile, site, vial_id",
       )
       .in("plan_item_id", itemIds)
       .eq("slot", "injection")

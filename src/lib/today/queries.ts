@@ -1,17 +1,28 @@
 import "server-only";
-import { addDays, toLocal } from "@/engine/time";
+import { addDays, toLocal, zonedTimeToInstant } from "@/engine/time";
 import { requireOwner } from "@/lib/auth/session";
 import { type Dog, getMyDog } from "@/lib/dogs/queries";
 import { type DogPlan, getDogPlan } from "@/lib/plan/queries";
+import { signsType } from "@/lib/signs/signs";
 import { createClient } from "@/lib/supabase/server";
+import { getPack } from "@/packs/registry";
 import { type InjectionInfo, getInjectionInfo } from "@/lib/treatments/queries";
 import { type Tick, type TodayInput } from "./today";
+
+export type QuickCheck = {
+  id: string;
+  taken_at: string;
+  values_json: Record<string, boolean>;
+  recorded_by: string | null;
+};
 
 export type TodayData = {
   dog: Dog;
   plan: DogPlan | null;
   input: TodayInput;
   injections: Record<string, InjectionInfo>;
+  /** Today's quick checks on the owner's clock, latest first. */
+  checks: QuickCheck[];
 };
 
 /** The signed-in owner's time zone; every member sees the dog's day on their own clock. */
@@ -58,8 +69,11 @@ export async function getTodayData(): Promise<TodayData | null> {
     ticks: [],
     names,
   };
-  if (!plan || plan.items.length === 0)
-    return { dog, plan, input, injections: {} };
+  if (!plan) return { dog, plan, input, injections: {}, checks: [] };
+  const signs = signsType(getPack(plan.condition.condition_key));
+  const checks = signs ? await getQuickChecks(plan.condition.id, signs.key, timeZone, now) : [];
+  if (plan.items.length === 0)
+    return { dog, plan, input, injections: {}, checks };
 
   const supabase = await createClient();
   const today = toLocal(now, timeZone).date;
@@ -100,5 +114,25 @@ export async function getTodayData(): Promise<TodayData | null> {
       anchoredOn: anchor.data.anchored_on,
       cycleNo: anchor.data.cycle_no,
     };
-  return { dog, plan, input, injections };
+  return { dog, plan, input, injections, checks };
+}
+
+/** The quick checks saved since midnight on the owner's clock. */
+async function getQuickChecks(
+  conditionId: string,
+  typeKey: string,
+  timeZone: string,
+  now: Date,
+): Promise<QuickCheck[]> {
+  const supabase = await createClient();
+  const dayStart = zonedTimeToInstant(toLocal(now, timeZone).date, "00:00", timeZone);
+  const { data, error } = await supabase
+    .from("observations")
+    .select("id, taken_at, values_json, recorded_by")
+    .eq("dog_condition_id", conditionId)
+    .eq("type_key", typeKey)
+    .gte("taken_at", dayStart.toISOString())
+    .order("taken_at", { ascending: false });
+  if (error) throw new Error(`Could not load today's checks: ${error.message}`);
+  return (data ?? []) as QuickCheck[];
 }

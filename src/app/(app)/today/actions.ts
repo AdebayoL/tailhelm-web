@@ -6,7 +6,9 @@ import { toLocal, zonedTimeToInstant } from "@/engine/time";
 import { requireOwner } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { getTimeZone, householdNames } from "@/lib/today/queries";
+import { parseSignsForm, signsType } from "@/lib/signs/signs";
 import { parseInjectionForm } from "@/lib/treatments/input";
+import { getPack } from "@/packs/registry";
 
 export type TickState = {
   done?: boolean;
@@ -211,4 +213,63 @@ export async function logInjection(
   }
   refresh();
   return { savedAt: Date.now() };
+}
+
+export type CheckState = { failed?: boolean; savedAt?: number };
+
+/**
+ * Saves a quick check: the signs ticked, or none. Each check is its own
+ * record with who saved it and when, so two people checking the dog on the
+ * same day both show.
+ */
+export async function logQuickCheck(
+  _state: CheckState,
+  form: FormData,
+): Promise<CheckState> {
+  await requireOwner();
+  const supabase = await createClient();
+  const conditionId = String(form.get("dog_condition_id") ?? "");
+  const { data: condition, error: conditionError } = await supabase
+    .from("dog_conditions")
+    .select("id, condition_key")
+    .eq("id", conditionId)
+    .maybeSingle<{ id: string; condition_key: string }>();
+  const type = condition && signsType(getPack(condition.condition_key));
+  if (conditionError || !condition || !type) {
+    console.error("[today] quick check refused", { code: conditionError?.code });
+    return { failed: true };
+  }
+  const signs = parseSignsForm(form, type);
+  const { error } = await supabase.from("observations").insert({
+    dog_condition_id: condition.id,
+    type_key: type.key,
+    taken_at: new Date().toISOString(),
+    values_json: Object.fromEntries(signs.map((s) => [s, true])),
+  });
+  if (error) {
+    console.error("[today] quick check failed", {
+      code: error.code,
+      message: error.message,
+    });
+    return { failed: true };
+  }
+  refresh();
+  return { savedAt: Date.now() };
+}
+
+/** Removes a quick check the signed-in person saved. */
+export async function undoQuickCheck(form: FormData): Promise<void> {
+  const owner = await requireOwner();
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("observations")
+    .delete()
+    .eq("id", String(form.get("observation_id") ?? ""))
+    .eq("recorded_by", owner.userId);
+  if (error)
+    console.error("[today] undo quick check failed", {
+      code: error.code,
+      message: error.message,
+    });
+  refresh();
 }

@@ -7,7 +7,9 @@ import { describePlanItem, formatDate } from "@/lib/plan/input";
 import { getTodayData } from "@/lib/today/queries";
 import { buildToday, nextActionText } from "@/lib/today/today";
 import { TabPage } from "../_components/tab-page";
+import { undoTick } from "./actions";
 import { DoseTick } from "./dose-tick";
+import { InjectionLog } from "./injection-log";
 
 export const metadata: Metadata = { title: "Today · Tailhelm" };
 
@@ -97,7 +99,11 @@ async function TodayContent() {
                 <p className="text-xl font-semibold">
                   {d.slot} · {d.item.product}
                 </p>
-                <p className="text-base">{describePlanItem(plan.items.find((i) => i.id === d.item.id)!)}</p>
+                <p className="text-base">
+                  {describePlanItem(
+                    plan.items.find((i) => i.id === d.item.id)!,
+                  )}
+                </p>
                 {d.status === "late" && (
                   <p className="text-lg font-semibold">
                     Not ticked yet. It was due at {d.slot}.
@@ -119,17 +125,79 @@ async function TodayContent() {
           <h2 id="injections" className="text-xl font-semibold">
             Injections
           </h2>
-          {today.countdowns.map((c) => (
-            <p key={c.item.id} className="text-lg">
-              {c.dueOn === null
-                ? `${c.item.product}: the next date shows once the last injection is logged.`
-                : c.daysUntil! < 0
-                  ? `${c.item.product}: was due on ${formatDate(c.dueOn)}.`
-                  : c.daysUntil === 0
-                    ? `${c.item.product}: due today.`
-                    : `${c.item.product}: due on ${formatDate(c.dueOn)}, in ${c.daysUntil} day${c.daysUntil === 1 ? "" : "s"}.`}
-            </p>
-          ))}
+          {today.countdowns.map((c) => {
+            const planItem = plan.items.find((i) => i.id === c.item.id)!;
+            const info = data.injections[c.item.id] ?? {
+              last: null,
+              vials: [],
+            };
+            const last = info.last;
+            const by = last
+              ? (last.given_by ??
+                (last.given_by_profile === input.me
+                  ? "you"
+                  : ((last.given_by_profile &&
+                      input.names[last.given_by_profile]) ??
+                    "someone in the household")))
+              : null;
+            return (
+              <div
+                key={c.item.id}
+                className="flex flex-col gap-3 rounded-2xl border border-ink/30 p-4"
+              >
+                <p className="text-xl font-semibold">{c.item.product}</p>
+                <p className="text-base">{describePlanItem(planItem)}</p>
+                <p className="text-lg">
+                  {c.dueOn === null
+                    ? "The next date shows once the last injection is logged."
+                    : c.daysUntil! < 0
+                      ? `Was due on ${formatDate(c.dueOn)}.`
+                      : c.daysUntil === 0
+                        ? "Due today."
+                        : `Due on ${formatDate(c.dueOn)}, in ${c.daysUntil} day${c.daysUntil === 1 ? "" : "s"}.`}
+                </p>
+                {last && (
+                  <div className="flex flex-col gap-1">
+                    <p className="text-lg">
+                      Last given {formatDate(last.given_on)}
+                      {last.amount !== null && `, ${last.amount} ${last.unit}`},
+                      by {by}
+                      {last.site && `, ${last.site}`}.
+                    </p>
+                    {last.given_by_profile === input.me && (
+                      <form action={undoTick}>
+                        <input
+                          type="hidden"
+                          name="treatment_id"
+                          value={last.id}
+                        />
+                        <button type="submit" className={quietLink}>
+                          Undo this entry
+                        </button>
+                      </form>
+                    )}
+                  </div>
+                )}
+                <InjectionLog
+                  planItemId={c.item.id}
+                  product={c.item.product ?? "injection"}
+                  today={today.date}
+                  amount={planItem.dose_amount}
+                  unit={planItem.dose_unit}
+                  vials={info.vials.map((v) => ({
+                    id: v.id,
+                    label: [
+                      v.batch ? `Batch ${v.batch}` : "Vial",
+                      v.opened_on && `opened ${formatDate(v.opened_on)}`,
+                      v.expires_on && `expires ${formatDate(v.expires_on)}`,
+                    ]
+                      .filter(Boolean)
+                      .join(", "),
+                  }))}
+                />
+              </div>
+            );
+          })}
         </section>
       )}
     </>

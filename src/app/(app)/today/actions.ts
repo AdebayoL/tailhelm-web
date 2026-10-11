@@ -13,6 +13,7 @@ import {
 import { parseStressEventForm } from "@/lib/events/input";
 import { parseSignsForm, signsType } from "@/lib/signs/signs";
 import { parseInjectionForm } from "@/lib/treatments/input";
+import { queuedTickTime } from "@/lib/offline/ticks";
 import { getPack } from "@/packs/registry";
 
 export type TickState = {
@@ -34,11 +35,42 @@ export async function tickDose(
   _state: TickState,
   form: FormData,
 ): Promise<TickState> {
+  return recordTick({
+    planItemId: String(form.get("plan_item_id") ?? ""),
+    slot: String(form.get("slot") ?? ""),
+    second: form.get("second_dose") === "confirmed",
+    givenAt: new Date(),
+  });
+}
+
+/**
+ * Sends a tick made with no signal, at the time it was made on the phone. It
+ * goes through the same lock, so if someone else ticked the dose meanwhile the
+ * owner is told who and when, and nothing is recorded twice.
+ */
+export async function sendQueuedTick(entry: {
+  planItemId: string;
+  slot: string;
+  givenAt: string;
+}): Promise<TickState> {
+  const givenAt = queuedTickTime(entry.givenAt, new Date());
+  if (!givenAt) return { failed: true };
+  return recordTick({ planItemId: String(entry.planItemId), slot: String(entry.slot), second: false, givenAt });
+}
+
+async function recordTick({
+  planItemId,
+  slot,
+  second,
+  givenAt,
+}: {
+  planItemId: string;
+  slot: string;
+  second: boolean;
+  givenAt: Date;
+}): Promise<TickState> {
   const owner = await requireOwner();
   const supabase = await createClient();
-  const planItemId = String(form.get("plan_item_id") ?? "");
-  const slot = String(form.get("slot") ?? "");
-  const second = form.get("second_dose") === "confirmed";
 
   const { data: item, error: itemError } = await supabase
     .from("plan_items")
@@ -68,7 +100,7 @@ export async function tickDose(
   }
 
   const timeZone = await getTimeZone(owner.userId);
-  const givenOn = toLocal(new Date(), timeZone).date;
+  const givenOn = toLocal(givenAt, timeZone).date;
 
   let extraNo = 0;
   if (second) {
@@ -87,6 +119,7 @@ export async function tickDose(
 
   const { error } = await supabase.from("treatments").insert({
     plan_item_id: item.id,
+    given_at: givenAt.toISOString(),
     given_on: givenOn,
     slot,
     extra_no: extraNo,

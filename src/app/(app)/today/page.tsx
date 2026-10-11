@@ -14,6 +14,7 @@ import { TabPage } from "../_components/tab-page";
 import { removeStressEvent, undoQuickCheck, undoTick } from "./actions";
 import { DoseTick } from "./dose-tick";
 import { InjectionLog } from "./injection-log";
+import { OfflineDay } from "./offline-day";
 import { QuickCheck } from "./quick-check";
 import { StressEventForm } from "./stress-event-form";
 
@@ -72,8 +73,16 @@ async function TodayContent() {
   const signs = signsType(pack);
   const signsAlert = signsRule(pack);
 
+  // Enough of the plan to work out another day's doses on the phone with no signal.
+  const offlineDoses = plan.items.flatMap((i) =>
+    i.schedule_json.kind === "fixed"
+      ? [{ id: i.id, product: i.product, description: describePlanItem(i), times: i.schedule_json.times }]
+      : [],
+  );
+
   return (
     <>
+      <OfflineDay savedOn={today.date} timeZone={input.timeZone} doses={offlineDoses} />
       <section
         aria-labelledby="next-action"
         className={`flex flex-col gap-4 rounded-2xl border-2 p-5 ${overdue ? "border-alert-red" : "border-green"}`}
@@ -86,6 +95,8 @@ async function TodayContent() {
           <DoseTick
             planItemId={next.dose.item.id}
             slot={next.dose.slot}
+            product={next.dose.item.product}
+            timeZone={input.timeZone}
             ticks={next.dose.ticks}
           />
         )}
@@ -171,6 +182,8 @@ async function TodayContent() {
                 <DoseTick
                   planItemId={d.item.id}
                   slot={d.slot}
+                  product={d.item.product}
+                  timeZone={input.timeZone}
                   ticks={d.ticks}
                 />
               </li>

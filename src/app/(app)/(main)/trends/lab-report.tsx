@@ -95,7 +95,8 @@ export function LabList({ rows }: { rows: LabRow[] }) {
   );
 }
 
-const COLS = "136px 120px minmax(0, 1fr) 112px 280px";
+// Columns give way on a narrow desktop (1024px) so the table never runs past the card.
+const COLS = "minmax(88px, 136px) minmax(88px, 120px) minmax(110px, 1fr) minmax(80px, 112px) minmax(120px, 280px)";
 
 /** The desktop's table: test, result, the bar, the report's range and the reading. */
 export function LabTable({ rows }: { rows: LabRow[] }) {

@@ -1,10 +1,10 @@
 import type { Metadata, Viewport } from "next";
-import { Source_Sans_3 } from "next/font/google";
+import { IBM_Plex_Sans } from "next/font/google";
 import "./globals.css";
 
 // The design's one typeface: Regular, Medium and Semibold, with tabular figures where numbers line up.
-const sourceSans = Source_Sans_3({
-  variable: "--font-source-sans",
+const plexSans = IBM_Plex_Sans({
+  variable: "--font-plex-sans",
   subsets: ["latin"],
   weight: ["400", "500", "600"],
   style: ["normal", "italic"],
@@ -29,7 +29,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en-GB" className={sourceSans.variable}>
+    <html lang="en-GB" className={plexSans.variable}>
       <body>{children}</body>
     </html>
   );

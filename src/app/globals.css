@@ -4,5 +4,5 @@
 /* Tailwind supplies the base reset; colours, type, layout and components
    come from the design system in tailhelm.css. */
 @theme inline {
-  --font-sans: var(--font-source-sans);
+  --font-sans: var(--font-plex-sans);
 }

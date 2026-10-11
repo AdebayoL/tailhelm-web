@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Suspense } from "react";
 import { TABS } from "@/lib/app/nav";
 import { requireOwner } from "@/lib/auth/session";
@@ -38,6 +39,11 @@ async function Profile() {
   return (
     <section className="flex flex-col gap-4">
       <h2 className="text-2xl font-semibold">{dog ? dog.name : "Add your dog"}</h2>
+      {dog && (
+        <Link href="/vet-visit" className="min-h-12 text-lg text-green underline underline-offset-4">
+          Open the vet-visit screen
+        </Link>
+      )}
       <DogProfileForm dog={dog} />
     </section>
   );

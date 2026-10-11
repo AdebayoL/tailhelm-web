@@ -25,6 +25,9 @@ export default function EmergencyPage() {
       <Suspense fallback={null}>
         <CallButtons />
       </Suspense>
+      <Link href="/vet-visit" className={quietButton}>
+        Show the vet the plan and records
+      </Link>
     </main>
   );
 }

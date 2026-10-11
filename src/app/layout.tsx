@@ -10,6 +10,9 @@ const sourceSans = Source_Sans_3({
 export const metadata: Metadata = {
   title: "Tailhelm",
   description: "The care log for dogs with lifelong conditions",
+  // iPhone reads these when the app is added to the home screen.
+  appleWebApp: { capable: true, title: "Tailhelm", statusBarStyle: "default" },
+  icons: { apple: "/icons/apple-touch-icon.png" },
 };
 
 export const viewport: Viewport = {

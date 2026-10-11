@@ -8,12 +8,12 @@ import { describePlanItem, formatDate, planOptions } from "@/lib/plan/input";
 import { getDogPlan } from "@/lib/plan/queries";
 import { CONDITION_NAMES } from "@/packs/pack-sql";
 import { getPack } from "@/packs/registry";
-import { signOut } from "../../sign-in/actions";
 import { TabPage } from "../_components/tab-page";
 import { ConditionForm } from "./condition-form";
 import { DogProfileForm } from "./dog-profile-form";
 import { PlanItemForm } from "./plan-item-form";
 import { RetireButton } from "./retire-button";
+import { SignOutButton } from "./sign-out-button";
 
 export const metadata: Metadata = { title: "Dog · Tailhelm" };
 
@@ -130,11 +130,7 @@ async function Account() {
       <a href="/dog/export" download className="min-h-12 text-lg text-green underline underline-offset-4">
         Download all records (CSV)
       </a>
-      <form action={signOut}>
-        <button type="submit" className="min-h-12 text-lg text-green underline underline-offset-4">
-          Sign out
-        </button>
-      </form>
+      <SignOutButton />
     </section>
   );
 }

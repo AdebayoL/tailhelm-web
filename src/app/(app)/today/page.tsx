@@ -41,7 +41,11 @@ async function TodayContent() {
         <Link href="/dog" className={quietLink}>
           Add your dog
         </Link>{" "}
-        to see what is due each day.
+        to see what is due each day. If someone invited you to help care for their dog, accept on the{" "}
+        <Link href="/care-team" className={quietLink}>
+          Care team
+        </Link>{" "}
+        tab.
       </p>
     );
   }

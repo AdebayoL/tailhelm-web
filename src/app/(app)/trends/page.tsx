@@ -9,11 +9,15 @@ import { formatDate } from "@/lib/plan/input";
 import { getDogPlan } from "@/lib/plan/queries";
 import { derivedDefs, describeValue, resultTypes } from "@/lib/results/input";
 import { getResults } from "@/lib/results/queries";
+import { getNotes } from "@/lib/notes/queries";
+import { WEIGHT_TYPE, describeWeight } from "@/lib/weight/input";
 import { getTimeZone } from "@/lib/today/queries";
 import { getPack } from "@/packs/registry";
 import { TabPage } from "../_components/tab-page";
-import { removeResult } from "./actions";
+import { removeNote, removeResult } from "./actions";
+import { NoteForm } from "./note-form";
 import { ResultForm } from "./result-form";
+import { WeightForm } from "./weight-form";
 
 export const metadata: Metadata = { title: "Trends · Tailhelm" };
 
@@ -45,8 +49,14 @@ async function Results() {
   }
   const pack = getPack(plan.condition.condition_key);
   const types = resultTypes(pack);
-  const [results, timeZone] = await Promise.all([getResults(plan.condition.id), getTimeZone(owner.userId)]);
+  const [results, weights, notes, timeZone] = await Promise.all([
+    getResults(plan.condition.id, types.map((t) => t.key)),
+    getResults(plan.condition.id, [WEIGHT_TYPE]),
+    getNotes(dog.id),
+    getTimeZone(owner.userId),
+  ]);
   const today = toLocal(new Date(), timeZone).date;
+  const localDate = (at: string) => toLocal(new Date(at), timeZone).date;
 
   return (
     <>
@@ -106,6 +116,70 @@ async function Results() {
           </section>
         );
       })}
+
+      <section aria-labelledby="weight" className="flex flex-col gap-4">
+        <h2 id="weight" className="text-xl font-semibold">
+          Weight
+        </h2>
+        <WeightForm conditionId={plan.condition.id} today={today} />
+        {weights.length === 0 ? (
+          <p className="text-lg">No weights yet.</p>
+        ) : (
+          <ul className="flex flex-col gap-3">
+            {weights.map((w, i) => {
+              const before = weights[i + 1];
+              return (
+                <li key={w.id} className="flex flex-col gap-1 rounded-2xl border border-ink/30 p-4">
+                  <p className="text-lg font-semibold">{formatDate(localDate(w.taken_at))}</p>
+                  <p className="text-lg">
+                    {describeWeight(
+                      w.values_json.kg,
+                      before ? { kg: before.values_json.kg, on: localDate(before.taken_at) } : null,
+                      formatDate,
+                    )}
+                  </p>
+                  {w.note && <p className="text-base">Note: {w.note}</p>}
+                  {w.recorded_by === owner.userId && (
+                    <form action={removeResult}>
+                      <input type="hidden" name="observation_id" value={w.id} />
+                      <button type="submit" className={quietLink}>
+                        Remove this weight
+                      </button>
+                    </form>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
+
+      <section aria-labelledby="notes" className="flex flex-col gap-4">
+        <h2 id="notes" className="text-xl font-semibold">
+          Notes
+        </h2>
+        <NoteForm dogId={dog.id} today={today} />
+        {notes.length === 0 ? (
+          <p className="text-lg">No notes yet.</p>
+        ) : (
+          <ul className="flex flex-col gap-3">
+            {notes.map((n) => (
+              <li key={n.id} className="flex flex-col gap-1 rounded-2xl border border-ink/30 p-4">
+                <p className="text-lg font-semibold">{formatDate(localDate(n.started_at))}</p>
+                <p className="whitespace-pre-line text-lg">{n.note}</p>
+                {n.recorded_by === owner.userId && (
+                  <form action={removeNote}>
+                    <input type="hidden" name="event_id" value={n.id} />
+                    <button type="submit" className={quietLink}>
+                      Remove this note
+                    </button>
+                  </form>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
     </>
   );
 }

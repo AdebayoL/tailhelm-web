@@ -4,8 +4,10 @@ import { refresh } from "next/cache";
 import { daysBetween, toLocal, zonedTimeToInstant } from "@/engine/time";
 import { requireOwner } from "@/lib/auth/session";
 import { deriveValues, parseResultForm, resultTypes } from "@/lib/results/input";
+import { NOTE_KIND, parseNoteForm } from "@/lib/notes/input";
 import { createClient } from "@/lib/supabase/server";
 import { getTimeZone } from "@/lib/today/queries";
+import { WEIGHT_TYPE, parseWeightForm } from "@/lib/weight/input";
 import { getPack } from "@/packs/registry";
 
 export type ResultState = {
@@ -91,5 +93,69 @@ export async function removeResult(form: FormData): Promise<void> {
     .eq("id", String(form.get("observation_id") ?? ""))
     .eq("recorded_by", owner.userId);
   if (error) console.error("[results] remove failed", { code: error.code, message: error.message });
+  refresh();
+}
+
+/** Saves a weight in kilograms. Row-level security checks the condition belongs to the household. */
+export async function logWeight(_state: ResultState, form: FormData): Promise<ResultState> {
+  const owner = await requireOwner();
+  const timeZone = await getTimeZone(owner.userId);
+  const now = new Date();
+  const today = toLocal(now, timeZone).date;
+  const parsed = parseWeightForm(form, today);
+  if (!parsed.ok) return { errors: parsed.errors, values: typed(form) };
+  const w = parsed.value;
+  const supabase = await createClient();
+  const { error } = await supabase.from("observations").insert({
+    dog_condition_id: String(form.get("dog_condition_id") ?? ""),
+    type_key: WEIGHT_TYPE,
+    taken_at: (w.taken_on === today ? now : zonedTimeToInstant(w.taken_on, "12:00", timeZone)).toISOString(),
+    values_json: { kg: w.kg },
+    note: w.note,
+  });
+  if (error) {
+    console.error("[weight] save failed", { code: error.code, message: error.message });
+    return { failed: true, values: typed(form) };
+  }
+  refresh();
+  return { savedAt: Date.now() };
+}
+
+/** Saves a note about the dog for the day it is about. */
+export async function addNote(_state: ResultState, form: FormData): Promise<ResultState> {
+  const owner = await requireOwner();
+  const timeZone = await getTimeZone(owner.userId);
+  const now = new Date();
+  const today = toLocal(now, timeZone).date;
+  const parsed = parseNoteForm(form, today);
+  if (!parsed.ok) return { errors: parsed.errors, values: typed(form) };
+  const n = parsed.value;
+  const supabase = await createClient();
+  const { error } = await supabase.from("events").insert({
+    dog_id: String(form.get("dog_id") ?? ""),
+    kind: NOTE_KIND,
+    started_at: (n.on === today ? now : zonedTimeToInstant(n.on, "12:00", timeZone)).toISOString(),
+    note: n.text,
+    capture_mode: "logged",
+  });
+  if (error) {
+    console.error("[notes] save failed", { code: error.code, message: error.message });
+    return { failed: true, values: typed(form) };
+  }
+  refresh();
+  return { savedAt: Date.now() };
+}
+
+/** Removes a note. The form offers it only to the person who wrote it. */
+export async function removeNote(form: FormData): Promise<void> {
+  const owner = await requireOwner();
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("events")
+    .delete()
+    .eq("id", String(form.get("event_id") ?? ""))
+    .eq("kind", NOTE_KIND)
+    .eq("recorded_by", owner.userId);
+  if (error) console.error("[notes] remove failed", { code: error.code, message: error.message });
   refresh();
 }

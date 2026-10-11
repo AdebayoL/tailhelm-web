@@ -1,7 +1,8 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { DateParts } from "@/app/_components/date-parts";
+import { Icon } from "@/app/_components/icon";
 import { ErrorText, Field, NotSaved, describedBy } from "@/app/_components/form";
 import { useCloseOnSave, useCloseSheet } from "@/app/_components/sheet-link";
 import { type DerivedDef, type Range, type ResultType, deriveFrom } from "@/lib/results/input";
@@ -50,6 +51,15 @@ function Fields({
   pending: boolean;
 }) {
   const close = useCloseSheet();
+  const form = useRef<HTMLFormElement>(null);
+  const errorCount = Object.keys(state.errors ?? {}).length;
+  // After a refused save, take the owner to the first thing to fix: it may be scrolled out of view.
+  useEffect(() => {
+    if (!state.errors) return;
+    const first = form.current?.querySelector<HTMLInputElement>('[aria-invalid="true"]');
+    first?.scrollIntoView({ block: "center" });
+    first?.focus({ preventScroll: true });
+  }, [state.errors]);
   const was = (name: string, fallback = "") => state.values?.[name] ?? fallback;
   const [typedValues, setTypedValues] = useState<Record<string, string>>({});
   const err = (name: string) => state.errors?.[name];
@@ -62,7 +72,7 @@ function Fields({
       }),
     ),
   );
-  const small = (name: string, label: string, fallback: string, width: number) => (
+  const small = (name: string, label: string, fallback: string, width: number, invalid: boolean) => (
     <label className="stack-4">
       <span className="ty-sm c2">{label}</span>
       <input
@@ -71,6 +81,7 @@ function Fields({
         type="text"
         inputMode="decimal"
         autoComplete="off"
+        aria-invalid={invalid ? true : undefined}
         className="inp tn"
         style={{ width }}
       />
@@ -78,7 +89,7 @@ function Fields({
   );
 
   return (
-    <form action={action} className="stack-24" noValidate>
+    <form ref={form} action={action} className="stack-24" noValidate>
       <input type="hidden" name="dog_condition_id" value={conditionId} />
       <input type="hidden" name="type_key" value={type.key} />
       <DateParts name="taken_on" legend="Day the blood was taken" error={err("taken_on")} defaultValue={was("taken_on", today)} />
@@ -110,8 +121,8 @@ function Fields({
                   style={{ width: 120 }}
                 />
               </label>
-              {small(`${f.key}_low`, "Report range from", last ? String(last.low) : "", 112)}
-              {small(`${f.key}_high`, "to", last ? String(last.high) : "", 112)}
+              {small(`${f.key}_low`, "Report range from", last ? String(last.low) : "", 112, !!err(`${f.key}_range`))}
+              {small(`${f.key}_high`, "to", last ? String(last.high) : "", 112, !!err(`${f.key}_range`))}
             </div>
           </fieldset>
         );
@@ -141,6 +152,14 @@ function Fields({
       </Field>
 
       {state.failed && <NotSaved what="The lab report" />}
+      {errorCount > 0 && (
+        <div className="banner banner-warn" role="alert">
+          <Icon name="alert" />
+          <p>
+            <b>The lab report wasn&rsquo;t saved.</b> {errorCount === 1 ? "One thing above needs" : `${errorCount} things above need`} changing first.
+          </p>
+        </div>
+      )}
       <div className="stack-8">
         <button type="submit" disabled={pending} className={pending ? "btn btn-primary is-loading" : "btn btn-primary"}>
           {pending && <span className="spin" aria-hidden="true" />}

@@ -914,7 +914,6 @@
   .side-dog { background: var(--f-sidecard); box-shadow: var(--f-sidecard-shadow); }
   .nav-item.on { background: var(--f-nav-on); box-shadow: var(--f-nav-on-shadow); }
   .nav-item.on .ear { fill: var(--f-nav-on-ear); }
-  .nav-item.on::before { content: none; }
   @media (prefers-color-scheme: dark) {
     .ink .seg-item.on, .topbar .seg-item.on { background: var(--ink-accent); color: #0F2232; box-shadow: none; }
   }
@@ -1054,7 +1053,7 @@
       linear-gradient(to right, var(--desk-grid) 1px, transparent 1px) 0 0 / 24px 24px; }
 
     /* the instrument top bar on Today */
-    .topbar.instrument { flex-direction: column; align-items: stretch; gap: 28px; padding: 32px 48px; }
+    .topbar.instrument { flex-direction: column; flex-wrap: nowrap; align-items: stretch; gap: 28px; padding: 32px 48px; }
 
     /* jewel edge and a faint wash, chosen by what the card is about */
     .app .card:has(> .kicker .med.pred), .app .acc-pred { --tint: var(--indigo-wash); --jewel: var(--indigo); --tint-h: 96px; }
@@ -1207,7 +1206,7 @@
       --indigo-wash: #1C263A; --plum-wash: #222435; --ocean-wash: #172939; }
   }
   .desk .app-main { flex: 999 1 640px; }
-  .desk .topbar.instrument { display: flex; flex-direction: column; align-items: stretch; gap: 28px; }
+  .desk .topbar.instrument { display: flex; flex-direction: column; flex-wrap: nowrap; align-items: stretch; gap: 28px; }
 
   .hero-stage { position: relative; z-index: 1; width: 100%; max-width: 1136px; height: 690px; margin: 72px auto 0; }
   .hero-browser { position: absolute; left: 0; top: 0; width: 880px; }

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { EmergencyButton } from "./_components/emergency-button";
+import { OfflineSupport } from "./_components/offline-support";
 import { TabBar } from "./_components/tab-bar";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -12,6 +13,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </Link>
           <EmergencyButton />
         </div>
+        <OfflineSupport />
       </header>
       <div className="flex flex-1 flex-col">{children}</div>
       <div className="sticky bottom-0">

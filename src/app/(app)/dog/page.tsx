@@ -44,6 +44,11 @@ async function Profile() {
           Open the vet-visit screen
         </Link>
       )}
+      {dog && (
+        <Link href="/reminders" className="min-h-12 text-lg text-green underline underline-offset-4">
+          Set up calendar reminders
+        </Link>
+      )}
       <DogProfileForm dog={dog} />
     </section>
   );

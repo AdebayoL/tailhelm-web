@@ -58,6 +58,7 @@ export function PlanItemForm({
   const [medicineKey, setMedicineKey] = useState(state.values?.pack_key ?? "");
   const medicine = options.find((m) => m.key === medicineKey);
   const isTest = medicine?.kind === "observation";
+  const isPlan = medicine?.kind === "task";
   const replaceable = activeItems.filter((i) => i.pack_key === medicineKey);
   const err = (name: string) => state.errors?.[name];
   const was = (name: string) => state.values?.[name] ?? "";
@@ -87,11 +88,13 @@ export function PlanItemForm({
         </select>
       </Field>
 
-      {medicine?.hint && <p className="text-base">The published guidance says: {medicine.hint}.</p>}
+      {medicine?.hint && (
+        <p className="text-base">{medicine.kind === "observation" ? `The published guidance says: ${medicine.hint}.` : medicine.hint}</p>
+      )}
 
       {medicine && (
         <>
-          {!isTest && (
+          {medicine.kind === "medicine" && (
             <>
               <Field name="product" error={err("product")} label="Name on the label" hint="For example Prednisolone or Zycortal.">
                 <input id="product" name="product" defaultValue={was("product")} type="text" autoComplete="off" aria-describedby={described("product", true)} className={field} />
@@ -166,11 +169,24 @@ export function PlanItemForm({
             </div>
           )}
 
-          <Field name="set_by_vet_on" error={err("set_by_vet_on")} label={isTest ? "Date your vet asked for these" : "Date your vet set this"}>
+          <Field name="set_by_vet_on" error={err("set_by_vet_on")} label={isTest ? "Date your vet asked for these" : isPlan ? "Date your vet gave you this plan" : "Date your vet set this"}>
             <input id="set_by_vet_on" name="set_by_vet_on" defaultValue={was("set_by_vet_on")} type="date" aria-describedby={described("set_by_vet_on")} className={field} />
           </Field>
-          <Field name="vet_instructions" error={err("vet_instructions")} label="Your vet's instructions (optional)" hint="Copy them as your vet wrote them.">
-            <textarea id="vet_instructions" name="vet_instructions" defaultValue={was("vet_instructions")} rows={3} maxLength={500} aria-describedby={described("vet_instructions", true)} className={field} />
+          <Field
+            name="vet_instructions"
+            error={err("vet_instructions")}
+            label={isPlan ? "Your vet's plan, in their words" : "Your vet's instructions (optional)"}
+            hint="Copy them as your vet wrote them."
+          >
+            <textarea
+              id="vet_instructions"
+              name="vet_instructions"
+              defaultValue={was("vet_instructions")}
+              rows={isPlan ? 5 : 3}
+              maxLength={isPlan ? 1000 : 500}
+              aria-describedby={described("vet_instructions", true)}
+              className={field}
+            />
           </Field>
 
           {replaceable.length > 0 && (

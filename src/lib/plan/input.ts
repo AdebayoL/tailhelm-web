@@ -37,7 +37,7 @@ export function parseConditionForm(form: FormData): { ok: true; value: Condition
 
 export type PlanItemInput = {
   pack_key: string;
-  kind: "medicine" | "observation";
+  kind: "medicine" | "observation" | "task";
   product: string;
   strength: string | null;
   dose_amount: number | null;
@@ -51,7 +51,7 @@ export type PlanItemInput = {
 
 export type PlanOption = {
   key: string;
-  kind: "medicine" | "observation";
+  kind: "medicine" | "observation" | "task";
   name: string;
   scheduleKind: PlanSchedule["kind"];
   /** The pack's own description, shown as a hint. */
@@ -82,7 +82,15 @@ export function planOptions(conditionKey: string, variant: string | null): PlanO
       scheduleKind: "offset",
       hint: r.description,
     }));
-  return [...medicines, ...tests];
+  // The vet's plan for an event the pack names, such as a stressful event. Stored as the vet's words only.
+  const plans: PlanOption[] = pack.events.map((e) => ({
+    key: e.key,
+    kind: "task",
+    name: `Your vet's plan for a ${e.name.charAt(0).toLowerCase()}${e.name.slice(1).replace(/ coming up/, "")}`,
+    scheduleKind: "event",
+    hint: "Agree a plan with your vet for times like these, then copy their words here exactly.",
+  }));
+  return [...medicines, ...tests, ...plans];
 }
 
 /** Reads one plan item from the form, checked against what the pack lists for the dog's variant. */
@@ -94,6 +102,7 @@ export function parsePlanItemForm(
   const option = planOptions(conditionKey, variant).find((o) => o.key === form.get("pack_key"));
   if (!option) return { ok: false, errors: { pack_key: "Choose what to add." } };
   if (option.kind === "observation") return parseTestItem(form, option);
+  if (option.kind === "task") return parseEventPlan(form, option);
   const medicine = option;
 
   const errors: FieldErrors = {};
@@ -159,6 +168,33 @@ function parseTestItem(form: FormData, option: PlanOption): { ok: true; value: P
       usual_times: schedule.kind === "offset" ? [schedule.time] : [],
       set_by_vet_on: setOn,
       vet_instructions: instructions.success && instructions.data !== "" ? instructions.data : null,
+    },
+  };
+}
+
+/** The vet's plan for an event, in the vet's own words, with the date they gave it. No amount fields: the words are kept exactly as typed. */
+function parseEventPlan(form: FormData, option: PlanOption): { ok: true; value: PlanItemInput } | { ok: false; errors: FieldErrors } {
+  const errors: FieldErrors = {};
+  const setOn = String(form.get("set_by_vet_on") ?? "").trim();
+  if (!isLocalDate(setOn) || setOn > today()) errors.set_by_vet_on = "Enter the date your vet gave you this plan.";
+  const words = text(1000).safeParse(form.get("vet_instructions") ?? "");
+  if (!words.success) errors.vet_instructions = "Use 1,000 characters or fewer.";
+  else if (words.data === "") errors.vet_instructions = "Copy your vet's plan here, word for word.";
+  if (Object.keys(errors).length > 0 || !words.success) return { ok: false, errors };
+  return {
+    ok: true,
+    value: {
+      pack_key: option.key,
+      kind: "task",
+      product: "Stress plan",
+      strength: null,
+      dose_amount: null,
+      dose_unit: null,
+      schedule_kind: "event",
+      schedule_json: { kind: "event" },
+      usual_times: [],
+      set_by_vet_on: setOn,
+      vet_instructions: words.data,
     },
   };
 }
@@ -252,5 +288,6 @@ export function describePlanItem(item: {
   const dose = item.dose_amount !== null && item.dose_unit ? `${formatAmount(item.dose_amount)} ${item.dose_unit}` : null;
   const what = dose ? `${name}, ${dose}` : name;
   const set = item.set_by_vet_on ? ` (set by vet ${formatDate(item.set_by_vet_on)})` : "";
+  if (item.schedule_json.kind === "event") return `${what}${set}`;
   return `${what} ${describeSchedule(item.schedule_json)}${set}`;
 }

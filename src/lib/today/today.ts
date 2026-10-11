@@ -81,11 +81,21 @@ export type TestPlan = {
   upcoming: TestDate[] | null;
 };
 
+/** A stressful event the owner has planned for. */
+export type PlannedEvent = { id: string; title: string; startsOn: LocalDate; endsOn: LocalDate | null };
+
+export type EventDate = PlannedEvent & {
+  /** Days from today to the start; 0 while it is happening. */
+  daysUntil: number;
+  ongoing: boolean;
+};
+
 export type NextAction =
   | { kind: "overdue"; countdown: Countdown }
   | { kind: "dose"; dose: DoseSlot }
   | { kind: "soon"; countdown: Countdown }
   | { kind: "test"; test: TestDate }
+  | { kind: "event"; event: EventDate }
   | { kind: "clear"; allTicked: boolean };
 
 export type TodayInput = {
@@ -97,6 +107,8 @@ export type TodayInput = {
   /** The latest anchor of the dog's condition, if an injection has been logged. */
   latestAnchor?: { anchoredOn: LocalDate; cycleNo: number };
   names: Record<string, string>;
+  /** Stressful events planned from today on. */
+  events?: PlannedEvent[];
 };
 
 export type Today = {
@@ -104,6 +116,7 @@ export type Today = {
   doses: DoseSlot[];
   countdowns: Countdown[];
   tests: TestPlan[];
+  events: EventDate[];
   next: NextAction;
 };
 
@@ -177,11 +190,19 @@ export function buildToday(input: TodayInput): Today {
   }
   doses.sort((a, b) => a.dueAt.getTime() - b.dueAt.getTime());
 
-  return { date, doses, countdowns, tests, next: nextAction(doses, countdowns, tests) };
+  const events: EventDate[] = (input.events ?? [])
+    .filter((e) => (e.endsOn ?? e.startsOn) >= date)
+    .map((e) => {
+      const ongoing = e.startsOn <= date;
+      return { ...e, ongoing, daysUntil: ongoing ? 0 : daysBetween(date, e.startsOn) };
+    })
+    .sort((a, b) => a.startsOn.localeCompare(b.startsOn));
+
+  return { date, doses, countdowns, tests, events, next: nextAction(doses, countdowns, tests, events) };
 }
 
 /** The spec's priority order, for the items this screen knows about so far. */
-function nextAction(doses: DoseSlot[], countdowns: Countdown[], tests: TestPlan[]): NextAction {
+function nextAction(doses: DoseSlot[], countdowns: Countdown[], tests: TestPlan[], events: EventDate[]): NextAction {
   const dated = countdowns
     .filter((c) => c.daysUntil !== null)
     .sort((a, b) => a.daysUntil! - b.daysUntil!);
@@ -191,10 +212,13 @@ function nextAction(doses: DoseSlot[], countdowns: Countdown[], tests: TestPlan[
   if (dose) return { kind: "dose", dose };
   const soon = dated.find((c) => c.daysUntil! <= SOON_DAYS);
   if (soon) return { kind: "soon", countdown: soon };
+  // A test or stressful event, whichever comes first, within the week.
   const test = tests
     .flatMap((t) => t.upcoming ?? [])
     .sort((a, b) => a.daysUntil - b.daysUntil)
     .find((t) => t.daysUntil <= SOON_DAYS);
+  const event = events.find((e) => e.daysUntil <= SOON_DAYS);
+  if (event && (!test || event.daysUntil < test.daysUntil)) return { kind: "event", event };
   if (test) return { kind: "test", test };
   return { kind: "clear", allTicked: doses.length > 0 };
 }
@@ -206,6 +230,8 @@ export function nextActionText(
   next: NextAction,
   dogName: string,
   formatDate: (d: LocalDate) => string,
+  /** The vet's stress plan, in their words, if the owner has added one. */
+  stressPlan: string | null = null,
 ) {
   const name = (item: TodayItem, fallback: string) =>
     `${dogName}’s ${item.product ?? fallback}`;
@@ -246,6 +272,17 @@ export function nextActionText(
             ? `${what} around today, as your vet asked.`
             : `${what} around day ${day} after the injection: ${formatDate(dueOn)}, in ${plural(daysUntil, "day")}.`,
         detail: null,
+      };
+    }
+    case "event": {
+      const { title, startsOn, endsOn, daysUntil, ongoing } = next.event;
+      return {
+        title: ongoing
+          ? `${title}${endsOn ? `, until ${formatDate(endsOn)}` : ", today"}.`
+          : `${title} on ${formatDate(startsOn)}, in ${plural(daysUntil, "day")}.`,
+        detail: stressPlan
+          ? `Your vet’s plan: ${stressPlan}`
+          : `There is no stress plan for ${dogName} yet. Ask your vet what to do for events like this.`,
       };
     }
     case "clear":

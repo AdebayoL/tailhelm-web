@@ -7,14 +7,68 @@ import { parseEmail } from "@/lib/auth/input";
 
 export const HOUSEHOLD_SIZE = 3;
 
+/** An invitation can be accepted for this many days after it is sent. */
+export const INVITATION_DAYS = 7;
+
+const DAY_MS = 86_400_000;
+
 export type Member = {
   id: string;
   profile_id: string | null;
   role: "owner" | "member";
   invited_email: string | null;
-  status: "invited" | "active";
+  status: "invited" | "active" | "revoked";
   invited_at: string;
+  joined_at: string | null;
+  declined_at: string | null;
+  revoked_at: string | null;
 };
+
+/** When an invitation stops being open. */
+export function invitationExpires(invitedAt: string): Date {
+  return new Date(Date.parse(invitedAt) + INVITATION_DAYS * DAY_MS);
+}
+
+/** An invitation that can still be accepted. */
+export function isOpenInvitation(m: Pick<Member, "status" | "invited_at">, now: Date): boolean {
+  return m.status === "invited" && invitationExpires(m.invited_at) > now;
+}
+
+/** Invitations sent before this have closed. */
+export function closedBefore(now: Date): string {
+  return new Date(now.getTime() - INVITATION_DAYS * DAY_MS).toISOString();
+}
+
+export type PastInvitation = Member & { outcome: "declined" | "expired" | "cancelled"; endedAt: string | null };
+
+export type CareTeam = {
+  /** Owner first, then members in the order they joined. */
+  people: Member[];
+  /** Invitations still open, oldest first. */
+  waiting: Member[];
+  /** Invitations declined, cancelled or never answered, newest first. */
+  past: PastInvitation[];
+};
+
+/**
+ * The household as the care team screen shows it. A past invitation is one
+ * that never became a membership; a member who was removed or left is not one.
+ */
+export function careTeam(rows: Member[], now: Date): CareTeam {
+  const people = rows
+    .filter((m) => m.status === "active")
+    .sort((a, b) => (a.role === b.role ? (a.joined_at ?? a.invited_at).localeCompare(b.joined_at ?? b.invited_at) : a.role === "owner" ? -1 : 1));
+  const waiting = rows.filter((m) => isOpenInvitation(m, now));
+  const past: PastInvitation[] = [];
+  for (const m of rows) {
+    if (m.role !== "member" || !m.invited_email) continue;
+    if (m.declined_at) past.push({ ...m, outcome: "declined", endedAt: m.declined_at });
+    else if (m.status === "invited" && !isOpenInvitation(m, now)) past.push({ ...m, outcome: "expired", endedAt: invitationExpires(m.invited_at).toISOString() });
+    else if (m.status === "revoked" && !m.profile_id) past.push({ ...m, outcome: "cancelled", endedAt: m.revoked_at });
+  }
+  past.sort((a, b) => b.invited_at.localeCompare(a.invited_at));
+  return { people, waiting, past };
+}
 
 export function parseInviteForm(
   form: FormData,
@@ -33,8 +87,8 @@ export function parseDisplayName(form: FormData): { ok: true; name: string } | {
 }
 
 /** Places left in the household, counting open invitations. */
-export function placesLeft(members: Member[]): number {
-  return Math.max(0, HOUSEHOLD_SIZE - members.length);
+export function placesLeft(team: Pick<CareTeam, "people" | "waiting">): number {
+  return Math.max(0, HOUSEHOLD_SIZE - team.people.length - team.waiting.length);
 }
 
 /** A database refusal turned into words for the owner. */

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { PlanSchedule } from "@/engine/schedule";
-import { describePlanItem, formatDate, parseConditionForm, parsePlanItemForm } from "./input";
+import { describePlanItem, doseText, formatDate, howOften, parseConditionForm, parsePlanItemForm, planLine, setByVetText } from "./input";
 
 const BANNED = /\b(safe|normal|fine|streak|compliance|administer|dosage)\b/i;
 
@@ -168,7 +168,7 @@ describe("describePlanItem", () => {
         schedule_json: { kind: "fixed", times: ["08:00", "20:00"] },
         set_by_vet_on: "2026-09-12",
       }),
-    ).toBe("Prednisolone 5 mg tablets, 2.5 mg twice a day at 08:00 and 20:00 (set by vet 12 Sep 2026)");
+    ).toBe("Prednisolone 5 mg tablets, 2.5 mg twice daily at 08:00 and 20:00 (set by vet 12 Sep 2026)");
     expect(
       describePlanItem({
         product: "Zycortal",
@@ -193,6 +193,36 @@ describe("describePlanItem", () => {
       const text = describePlanItem({ product: "X", strength: null, dose_amount: 1, dose_unit: "mg", schedule_json, set_by_vet_on: "2026-01-01" });
       expect(text).not.toMatch(BANNED);
     }
+  });
+});
+
+describe("planLine", () => {
+  const item = {
+    product: "Prednisolone",
+    dose_amount: 2.5,
+    dose_unit: "mg",
+    schedule_json: { kind: "fixed", times: ["08:00", "18:00"] } as PlanSchedule,
+    set_by_vet_on: "2026-09-12",
+  };
+
+  it("splits a dose into its name, the amount as entered and how often", () => {
+    expect(planLine(item)).toEqual({ name: "Prednisolone", rest: "2.5 mg twice daily", set: "(set by vet 12 Sep 2026)" });
+    expect(
+      planLine({ ...item, product: "Zycortal", dose_amount: 1.1, dose_unit: "mL", schedule_json: { kind: "interval", everyDays: 28, time: "09:00" } }),
+    ).toEqual({ name: "Zycortal", rest: "1.1 mL injection every 28 days", set: "(set by vet 12 Sep 2026)" });
+  });
+
+  it("keeps the vet's own words for a stressful-day plan", () => {
+    expect(
+      planLine({ ...item, dose_amount: null, dose_unit: null, schedule_json: { kind: "event" }, vet_instructions: "Extra 2.5 mg on the morning." }),
+    ).toEqual({ name: "Prednisolone on stressful days", rest: "Extra 2.5 mg on the morning.", set: "(set by vet 12 Sep 2026)" });
+  });
+
+  it("leaves out what was not entered", () => {
+    expect(doseText({ dose_amount: null, dose_unit: null })).toBeNull();
+    expect(setByVetText({ set_by_vet_on: null })).toBeNull();
+    expect(howOften({ kind: "fixed", times: ["08:00"] })).toBe("once daily");
+    expect(howOften({ kind: "fixed", times: ["08:00", "12:00", "18:00"] })).toBe("3 times daily");
   });
 });
 

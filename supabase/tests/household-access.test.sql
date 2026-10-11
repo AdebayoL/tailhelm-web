@@ -90,6 +90,14 @@ select pg_temp.expect((select count(*) from public.plan_items), 1, 'a member see
 select pg_temp.expect((select count(*) from public.treatments), 1, 'a member sees treatments');
 select pg_temp.expect((select count(*) from public.observations), 1, 'a member sees results');
 select pg_temp.expect((select count(*) from public.events), 1, 'a member sees events');
+insert into public.observations (dog_condition_id, type_key, taken_at, values_json, scale)
+  values (:'bella_addisons', 'weight', now() - interval '2 days', '{"kg":24.6}', 'clinic');
+select pg_temp.expect((select count(*) from public.observations where scale = 'clinic' and created_at > taken_at), 1,
+  'a weight keeps its scale and when it was typed in');
+select pg_temp.expect_error(
+  format($$insert into public.observations (dog_condition_id, type_key, taken_at, values_json, scale)
+           values (%L, 'electrolytes', now(), '{}', 'home')$$, :'bella_addisons'),
+  'only a weight has a scale');
 select pg_temp.expect((select count(*) from public.profiles), 1, 'a person sees only their own profile');
 select pg_temp.expect((select count(*) from public.household_names(:'bella') where name = 'alice'), 1,
   'a member sees the names of the household, so a tick shows who gave it');

@@ -1,43 +1,8 @@
 @import "tailwindcss";
+@import "./tailhelm.css";
 
-/* Placeholder brand tokens until the design system lands. Amber and red are
-   reserved for real alerts and must not be used anywhere else. */
-:root {
-  --green: #1f4d3a;
-  --sand: #e9dfcf;
-  --paper: #f7f3ec;
-  --ink: #1b1b1a;
-  --alert-amber: #8f5600;
-  --alert-red: #b3261e;
-  /* The emergency button's fill, the same in both themes so white text keeps its contrast. */
-  --emergency: #b3261e;
-}
-
+/* Tailwind supplies the base reset; colours, type, layout and components
+   come from the design system in tailhelm.css. */
 @theme inline {
-  --color-green: var(--green);
-  --color-sand: var(--sand);
-  --color-paper: var(--paper);
-  --color-ink: var(--ink);
-  --color-alert-amber: var(--alert-amber);
-  --color-alert-red: var(--alert-red);
-  --color-emergency: var(--emergency);
   --font-sans: var(--font-source-sans);
-}
-
-/* Dark theme for night use: same roles, darker surfaces. Red and amber stay
-   reserved for alerts and keep enough contrast on the dark paper. */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --green: #8fc9a8;
-    --sand: #3a3530;
-    --paper: #161513;
-    --ink: #ece7df;
-    --alert-amber: #f0a640;
-    --alert-red: #e5534b;
-  }
-}
-
-body {
-  background: var(--paper);
-  color: var(--ink);
 }

@@ -8,6 +8,12 @@ export const PROTECTED_PREFIXES = ["/today", "/trends", "/care-team", "/dog", "/
 
 export const CODE_LENGTH = 6;
 
+/** How long a sign-in code works. Matches Email OTP Expiration (600 seconds) in Supabase. */
+export const CODE_VALID_MINUTES = 10;
+
+/** Supabase sends at most one code a minute to an address, so a new code is offered after this. */
+export const RESEND_AFTER_SECONDS = 60;
+
 const Email = z.email().max(254);
 
 /** Trims and lower-cases an email address, or returns null if it is not one. */

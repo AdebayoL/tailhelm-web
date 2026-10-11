@@ -12,10 +12,10 @@ export default function manifest(): MetadataRoute.Manifest {
     scope: "/",
     display: "standalone",
     orientation: "portrait",
-    background_color: "#f7f3ec",
-    theme_color: "#1f4d3a",
+    background_color: "#F5F7FA",
+    theme_color: "#F5F7FA",
     lang: "en-GB",
-    // Placeholder icons until the brand mark is designed.
+    // The symbol in white on a navy square; at 68% it sits inside the maskable safe zone too.
     icons: [
       { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
       { src: "/icons/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },

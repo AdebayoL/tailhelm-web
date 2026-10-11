@@ -82,6 +82,14 @@ select pg_temp.expect((select count(*) from public.calendar_feeds where revoked_
 select pg_temp.expect(public.calendar_feed(:token1) ->> 'live', 'false', 'the replaced link reads as empty');
 select pg_temp.expect(public.calendar_feed(:token2) ->> 'live', 'true', 'the new link is live');
 
+-- Each calendar app has its own link; removing one leaves the other.
+select public.new_calendar_feed(:'bella', pg_temp.hash(:token2 || 'apple'), 'apple');
+select pg_temp.expect((select count(*) from public.calendar_feeds where revoked_at is null)::text, '2', 'one live link per calendar app');
+select pg_temp.expect((select app from public.calendar_feeds where revoked_at is null and app <> 'other'), 'apple', 'the household sees which app a link is for');
+select public.revoke_calendar_feed(:'bella', 'apple');
+select pg_temp.expect(public.calendar_feed(:token2 || 'apple') ->> 'live', 'false', 'a removed app link reads as empty');
+select pg_temp.expect(public.calendar_feed(:token2) ->> 'live', 'true', 'the other app keeps its link');
+
 -- Stopping the link empties the calendar.
 select public.revoke_calendar_feed(:'bella');
 select pg_temp.expect(public.calendar_feed(:token2) ->> 'live', 'false', 'a stopped link reads as empty');

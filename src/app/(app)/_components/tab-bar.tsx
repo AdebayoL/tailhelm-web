@@ -2,30 +2,26 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Icon } from "@/app/_components/icon";
 import { TABS, tabFor } from "@/lib/app/nav";
 
+/** The four tabs: teal icon, label and a 2 px indicator on the keyline for the one in use. */
 export function TabBar() {
-  const current = tabFor(usePathname());
+  const pathname = usePathname();
+  // The vet visit is handed to a vet, so it stands alone.
+  if (pathname === "/vet-visit") return null;
+  const current = tabFor(pathname);
   return (
-    <nav aria-label="Tabs" className="border-t border-sand bg-paper pb-[env(safe-area-inset-bottom)]">
-      <ul className="mx-auto grid max-w-md grid-cols-4">
-        {TABS.map((tab) => {
-          const active = current?.href === tab.href;
-          return (
-            <li key={tab.href}>
-              <Link
-                href={tab.href}
-                aria-current={active ? "page" : undefined}
-                className={`flex min-h-14 items-center justify-center px-1 text-center text-base ${
-                  active ? "font-semibold text-green underline underline-offset-4" : "text-ink"
-                }`}
-              >
-                {tab.label}
-              </Link>
-            </li>
-          );
-        })}
-      </ul>
+    <nav className="tabbar app-tabbar" aria-label="Main">
+      {TABS.map((tab) => {
+        const on = current?.href === tab.href;
+        return (
+          <Link key={tab.href} href={tab.href} className={on ? "tab on" : "tab"} aria-current={on ? "page" : undefined}>
+            <Icon name={tab.icon} />
+            {tab.label}
+          </Link>
+        );
+      })}
     </nav>
   );
 }

@@ -2,6 +2,9 @@
 
 import * as Sentry from "@sentry/nextjs";
 import { useEffect } from "react";
+import { Icon } from "@/app/_components/icon";
+import { Wordmark } from "@/app/_components/mark";
+import "./globals.css";
 
 /** Shown only if the whole app fails to render. Reports the error and keeps the way to the vet open. */
 export default function GlobalError({ error, retry }: { error: Error & { digest?: string }; retry: () => void }) {
@@ -11,15 +14,23 @@ export default function GlobalError({ error, retry }: { error: Error & { digest?
 
   return (
     <html lang="en-GB">
-      <body style={{ fontFamily: "system-ui, sans-serif", padding: "2rem", maxWidth: "28rem", margin: "0 auto" }}>
-        <h1 style={{ fontSize: "1.75rem" }}>Tailhelm couldn&rsquo;t load this screen.</h1>
-        <p style={{ fontSize: "1.25rem" }}>If your dog is unwell, call your vet now.</p>
-        <p style={{ fontSize: "1.25rem" }}>
-          <a href="/emergency">Open the emergency screen</a>
-        </p>
-        <button type="button" onClick={() => retry()} style={{ fontSize: "1.25rem", minHeight: "3rem" }}>
-          Try again
-        </button>
+      <body>
+        <main className="stack-24" style={{ maxWidth: 520, margin: "0 auto", padding: "48px 20px" }}>
+          <span className="wm">
+            <Wordmark size={32} textStyle={{ fontSize: 26, lineHeight: "32px" }} />
+          </span>
+          <div className="stack-8" style={{ paddingTop: 24 }}>
+            <h1 className="auth-title">Tailhelm couldn&rsquo;t load this screen</h1>
+            <p className="ty-lead c2">If your dog is unwell, call your vet now.</p>
+          </div>
+          <a className="btn btn-emergency" href="/emergency">
+            <Icon name="call" />
+            Open the emergency screen
+          </a>
+          <button type="button" className="btn btn-secondary" onClick={() => retry()}>
+            Try again
+          </button>
+        </main>
       </body>
     </html>
   );

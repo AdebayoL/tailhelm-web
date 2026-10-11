@@ -25,13 +25,15 @@ export async function signInStep(state: SignInState, formData: FormData): Promis
   if (state.step === "email" || intent === "resend") {
     const email = intent === "resend" ? parseEmail(state.email) : parseEmail(formData.get("email"));
     if (!email) {
-      return { step: "email", email: String(formData.get("email") ?? ""), next, error: MESSAGES.badEmail };
+      const typed = String(formData.get("email") ?? "").trim();
+      return { step: "email", email: typed, next, error: typed ? MESSAGES.badEmail : MESSAGES.noEmail };
     }
     const supabase = await createClient();
     const { error } = await supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: true } });
     if (error) {
       logAuthError("send", error);
-      return { step: intent === "resend" ? "code" : "email", email, next, error: messageForAuthError(error.code, "send") };
+      const message = messageForAuthError(error.code, "send");
+      return intent === "resend" ? { ...state, next, error: message } : { step: "email", email, next, error: message };
     }
     return { step: "code", email, next, sentAt: Date.now() };
   }

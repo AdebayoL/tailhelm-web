@@ -41,7 +41,7 @@ export function CareRing({
     return `M${p(35.3)}L${p(38.3)}`;
   }).join("");
   return (
-    <svg className={className ? `ring ${className}` : "ring"} viewBox="0 0 72 72" width={size} height={size} role="img" aria-label={label}>
+    <svg className={className ? `care-ring ${className}` : "care-ring"} viewBox="0 0 72 72" width={size} height={size} role="img" aria-label={label}>
       <g transform="rotate(-90 36 36)" fill="none" strokeWidth="4">
         <circle cx="36" cy="36" r={R} className="ring-rest" strokeDasharray={`${f(dash)} ${f(GAP)}`} />
         <circle cx="36" cy="36" r={R} className="ring-past" strokeDasharray={pastDash} />

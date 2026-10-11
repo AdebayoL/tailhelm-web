@@ -13,7 +13,7 @@ import { InviteForm, NameForm } from "./forms";
 
 export const metadata: Metadata = { title: "Care team · Tailhelm" };
 
-const primary = "min-h-12 w-full rounded-lg bg-green px-4 py-3 text-lg font-semibold text-paper";
+const primary = "min-h-12 w-full rounded-2xl bg-green px-4 py-3 text-lg font-semibold text-paper";
 const quietLink = "min-h-12 text-lg text-green underline underline-offset-4";
 
 export default function CareTeamPage() {
@@ -104,7 +104,7 @@ async function Household() {
                   : ((m.profile_id && names[m.profile_id]) ?? "Someone");
             const what = m.status === "invited" ? "invited, not joined yet" : m.role === "owner" ? "owner" : "member";
             return (
-              <li key={m.id} className="flex flex-col gap-2 rounded-2xl border border-ink/30 p-4">
+              <li key={m.id} className="flex flex-col gap-2 rounded-2xl border border-rule bg-card p-4">
                 <p className="text-lg">
                   <span className="font-semibold">{who}</span> · {what}
                 </p>

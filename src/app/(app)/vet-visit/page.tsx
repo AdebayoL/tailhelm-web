@@ -19,7 +19,7 @@ export const metadata: Metadata = { title: "Vet visit · Tailhelm" };
 const callButton =
   "flex min-h-[72px] items-center justify-center rounded-2xl bg-emergency px-6 text-center text-xl font-semibold text-white";
 const quietLink = "min-h-12 text-lg text-green underline underline-offset-4";
-const card = "flex flex-col gap-2 rounded-2xl border border-ink/30 p-4";
+const card = "flex flex-col gap-2 rounded-2xl border border-rule bg-card p-4";
 
 /**
  * One screen to hand to a vet standing next to the dog: the condition, the

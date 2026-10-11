@@ -4,8 +4,8 @@ import { useActionState } from "react";
 import { addCondition, type PlanFormState } from "./plan-actions";
 
 const field =
-  "w-full rounded-lg border border-ink/30 bg-paper px-4 py-3 text-lg focus:border-green focus:outline-2 focus:outline-green";
-const primary = "min-h-12 w-full rounded-lg bg-green px-4 py-3 text-lg font-semibold text-paper disabled:opacity-60";
+  "w-full rounded-lg border border-rule-strong bg-card px-4 py-3 text-lg focus:border-green focus:outline-2 focus:outline-green";
+const primary = "min-h-12 w-full rounded-2xl bg-green px-4 py-3 text-lg font-semibold text-paper disabled:opacity-60";
 
 export type VariantOption = { key: string; label: string; definition: string | null };
 
@@ -31,7 +31,7 @@ export function ConditionForm({
       <fieldset className="flex flex-col gap-3" aria-describedby={variantError ? "variant-error" : undefined}>
         <legend className="mb-2 text-lg font-semibold">Which type of {conditionName} did your vet diagnose?</legend>
         {variants.map((v) => (
-          <label key={v.key} className="flex min-h-12 items-start gap-3 rounded-lg border border-ink/30 px-4 py-3">
+          <label key={v.key} className="flex min-h-12 items-start gap-3 rounded-xl border border-rule bg-card px-4 py-3">
             <input type="radio" name="variant" value={v.key} required className="mt-1.5 size-5 accent-green" />
             <span className="flex flex-col">
               <span className="text-lg font-semibold">{v.label}</span>

@@ -6,7 +6,7 @@ export function EmergencyButton() {
   return (
     <Link
       href={EMERGENCY_PATH}
-      className="flex min-h-12 items-center rounded-full bg-emergency px-5 text-base font-semibold text-white"
+      className="flex min-h-12 items-center rounded-full bg-emergency px-5 text-base font-bold text-white"
     >
       Emergency
     </Link>

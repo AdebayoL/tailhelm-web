@@ -128,7 +128,7 @@ async function TodayContent() {
             return (
               <div
                 key={c.id}
-                className={`flex flex-col gap-2 rounded-2xl p-4 ${alert ? "border-2 border-alert-amber" : "border border-ink/30"}`}
+                className={`flex flex-col gap-2 rounded-2xl p-4 ${alert ? "border-2 border-alert-amber" : "border border-rule bg-card"}`}
               >
                 <p className="text-lg">
                   Saved at {at} by {who}:{" "}
@@ -164,7 +164,7 @@ async function TodayContent() {
             {today.doses.map((d) => (
               <li
                 key={`${d.item.id}-${d.slot}`}
-                className="flex flex-col gap-3 rounded-2xl border border-ink/30 p-4"
+                className="flex flex-col gap-3 rounded-2xl border border-rule bg-card p-4"
               >
                 <p className="text-xl font-semibold">
                   {d.slot} · {d.item.product}
@@ -217,7 +217,7 @@ async function TodayContent() {
             return (
               <div
                 key={c.item.id}
-                className="flex flex-col gap-3 rounded-2xl border border-ink/30 p-4"
+                className="flex flex-col gap-3 rounded-2xl border border-rule bg-card p-4"
               >
                 <p className="text-xl font-semibold">{c.item.product}</p>
                 <p className="text-base">{describePlanItem(planItem)}</p>
@@ -287,7 +287,7 @@ async function TodayContent() {
             Blood tests
           </h2>
           {today.tests.map((t) => (
-            <div key={t.item.id} className="flex flex-col gap-2 rounded-2xl border border-ink/30 p-4">
+            <div key={t.item.id} className="flex flex-col gap-2 rounded-2xl border border-rule bg-card p-4">
               <p className="text-xl font-semibold">{t.item.product}</p>
               <p className="text-base">{describePlanItem(plan.items.find((i) => i.id === t.item.id)!)}</p>
               {t.upcoming === null ? (
@@ -317,7 +317,7 @@ async function TodayContent() {
           Stressful events
         </h2>
         {stressPlan?.vet_instructions ? (
-          <div className="flex flex-col gap-1 rounded-2xl border border-ink/30 p-4">
+          <div className="flex flex-col gap-1 rounded-2xl border border-rule bg-card p-4">
             <p className="text-lg font-semibold">Your vet&rsquo;s plan</p>
             <p className="whitespace-pre-line text-lg">{stressPlan.vet_instructions}</p>
             {stressPlan.set_by_vet_on && (
@@ -337,7 +337,7 @@ async function TodayContent() {
         {today.events.length > 0 && (
           <ul className="flex flex-col gap-2">
             {today.events.map((e) => (
-              <li key={e.id} className="flex flex-col gap-2 rounded-2xl border border-ink/30 p-4">
+              <li key={e.id} className="flex flex-col gap-2 rounded-2xl border border-rule bg-card p-4">
                 <p className="text-lg">
                   {e.title}: {formatDate(e.startsOn)}
                   {e.endsOn && ` to ${formatDate(e.endsOn)}`}

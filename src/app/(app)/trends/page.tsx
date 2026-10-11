@@ -78,7 +78,7 @@ async function Results() {
                 {ofType.map((r) => {
                   const taken = toLocal(new Date(r.taken_at), timeZone).date;
                   return (
-                    <li key={r.id} className="flex flex-col gap-1 rounded-2xl border border-ink/30 p-4">
+                    <li key={r.id} className="flex flex-col gap-1 rounded-2xl border border-rule bg-card p-4">
                       <p className="text-lg font-semibold">
                         {formatDate(taken)}
                         {r.days_since_anchor !== null && r.cycle_no !== null && `, day ${r.days_since_anchor} after injection ${r.cycle_no}`}
@@ -129,7 +129,7 @@ async function Results() {
             {weights.map((w, i) => {
               const before = weights[i + 1];
               return (
-                <li key={w.id} className="flex flex-col gap-1 rounded-2xl border border-ink/30 p-4">
+                <li key={w.id} className="flex flex-col gap-1 rounded-2xl border border-rule bg-card p-4">
                   <p className="text-lg font-semibold">{formatDate(localDate(w.taken_at))}</p>
                   <p className="text-lg">
                     {describeWeight(
@@ -164,7 +164,7 @@ async function Results() {
         ) : (
           <ul className="flex flex-col gap-3">
             {notes.map((n) => (
-              <li key={n.id} className="flex flex-col gap-1 rounded-2xl border border-ink/30 p-4">
+              <li key={n.id} className="flex flex-col gap-1 rounded-2xl border border-rule bg-card p-4">
                 <p className="text-lg font-semibold">{formatDate(localDate(n.started_at))}</p>
                 <p className="whitespace-pre-line text-lg">{n.note}</p>
                 {n.recorded_by === owner.userId && (

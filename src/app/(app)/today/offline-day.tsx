@@ -53,7 +53,7 @@ export function OfflineDay({ savedOn, timeZone, doses }: { savedOn: string; time
       </p>
       <ul className="flex flex-col gap-4">
         {slots.map(({ dose, slot }) => (
-          <li key={`${dose.id}-${slot}`} className="flex flex-col gap-3 rounded-2xl border border-ink/30 p-4">
+          <li key={`${dose.id}-${slot}`} className="flex flex-col gap-3 rounded-2xl border border-rule bg-card p-4">
             <p className="text-xl font-semibold">
               {slot} · {dose.product}
             </p>

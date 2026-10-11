@@ -7,6 +7,11 @@
   --sand: #e9dfcf;
   --paper: #f7f3ec;
   --ink: #1b1b1a;
+  /* Notebook look (chosen 11 Oct 2026): cards a shade lighter than the page, ruled lines, muted notes. */
+  --card: #fffdf8;
+  --rule: #e3d8c5;
+  --rule-strong: #8a7e6b;
+  --muted: #4a4339;
   --alert-amber: #8f5600;
   --alert-red: #b3261e;
   /* The emergency button's fill, the same in both themes so white text keeps its contrast. */
@@ -18,6 +23,10 @@
   --color-sand: var(--sand);
   --color-paper: var(--paper);
   --color-ink: var(--ink);
+  --color-card: var(--card);
+  --color-rule: var(--rule);
+  --color-rule-strong: var(--rule-strong);
+  --color-muted: var(--muted);
   --color-alert-amber: var(--alert-amber);
   --color-alert-red: var(--alert-red);
   --color-emergency: var(--emergency);
@@ -32,6 +41,10 @@
     --sand: #3a3530;
     --paper: #161513;
     --ink: #ece7df;
+    --card: #1f1d1a;
+    --rule: #3a3530;
+    --rule-strong: #8a8072;
+    --muted: #c9c0b2;
     --alert-amber: #f0a640;
     --alert-red: #e5534b;
   }
@@ -40,4 +53,9 @@
 body {
   background: var(--paper);
   color: var(--ink);
+}
+
+/* Times and counts line up in columns. */
+.tabular {
+  font-variant-numeric: tabular-nums;
 }

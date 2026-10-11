@@ -4,7 +4,7 @@ import { useActionState } from "react";
 import type { Sign } from "@/lib/signs/signs";
 import { type CheckState, logQuickCheck } from "./actions";
 
-const primary = "min-h-12 w-full rounded-lg bg-green px-4 py-3 text-lg font-semibold text-paper disabled:opacity-60";
+const primary = "min-h-12 w-full rounded-2xl bg-green px-4 py-3 text-lg font-semibold text-paper disabled:opacity-60";
 
 /** The quick check: tap any sign noticed today, then Save. Saving with none ticked records that too. */
 export function QuickCheck({ conditionId, signs }: { conditionId: string; signs: Sign[] }) {
@@ -19,7 +19,7 @@ export function QuickCheck({ conditionId, signs }: { conditionId: string; signs:
           {signs.map((s) => (
             <label
               key={s.key}
-              className="flex min-h-12 cursor-pointer items-center gap-3 rounded-lg border border-ink/30 px-3 py-2 text-base has-[:checked]:border-2 has-[:checked]:border-green has-[:checked]:font-semibold"
+              className="flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border border-rule-strong bg-card px-3 py-2 text-base has-[:checked]:border-2 has-[:checked]:border-green has-[:checked]:font-semibold"
             >
               <input type="checkbox" name="sign" value={s.key} className="size-5 accent-green" />
               {s.label}

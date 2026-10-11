@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Wordmark } from "../_components/mark";
 import { EmergencyButton } from "./_components/emergency-button";
 import { OfflineSupport } from "./_components/offline-support";
 import { TabBar } from "./_components/tab-bar";
@@ -6,10 +7,10 @@ import { TabBar } from "./_components/tab-bar";
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-dvh flex-1 flex-col">
-      <header className="sticky top-0 z-10 border-b border-sand bg-paper pt-[env(safe-area-inset-top)]">
-        <div className="mx-auto flex max-w-md items-center justify-between px-4 py-2">
-          <Link href="/today" className="text-xl font-semibold text-green">
-            Tailhelm
+      <header className="sticky top-0 z-10 border-b border-rule bg-paper pt-[env(safe-area-inset-top)]">
+        <div className="mx-auto flex max-w-md items-center justify-between px-5 py-2">
+          <Link href="/today" aria-label="Tailhelm, go to Today" className="flex min-h-12 items-center">
+            <Wordmark />
           </Link>
           <EmergencyButton />
         </div>

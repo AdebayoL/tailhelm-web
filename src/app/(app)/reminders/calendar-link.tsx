@@ -5,7 +5,7 @@ import { subscribeLinks } from "@/lib/calendar/links";
 import { type LinkState, makeCalendarLink } from "./actions";
 
 const primary =
-  "flex min-h-12 w-full items-center justify-center rounded-lg bg-green px-4 py-3 text-center text-lg font-semibold text-paper disabled:opacity-60";
+  "flex min-h-12 w-full items-center justify-center rounded-2xl bg-green px-4 py-3 text-center text-lg font-semibold text-paper disabled:opacity-60";
 const secondary =
   "flex min-h-12 w-full items-center justify-center rounded-lg border-2 border-green px-4 py-3 text-center text-lg font-semibold text-green";
 

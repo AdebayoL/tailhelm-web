@@ -4,9 +4,9 @@ import { useActionState } from "react";
 import { signInStep, type SignInState } from "./actions";
 
 const field =
-  "w-full rounded-lg border border-ink/30 bg-paper px-4 py-3 text-lg focus:border-green focus:outline-2 focus:outline-green";
+  "w-full rounded-lg border border-rule-strong bg-card px-4 py-3 text-lg focus:border-green focus:outline-2 focus:outline-green";
 const primary =
-  "w-full rounded-lg bg-green px-4 py-3 text-lg font-semibold text-paper disabled:opacity-60";
+  "w-full rounded-2xl bg-green px-4 py-3 text-lg font-semibold text-paper disabled:opacity-60";
 const secondary = "text-green underline underline-offset-4 disabled:opacity-60";
 
 export function SignInForm({ next }: { next: string }) {

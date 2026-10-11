@@ -97,7 +97,7 @@ async function Plan() {
       ) : (
         <ul className="flex flex-col gap-3">
           {labelled.map(({ item, label }) => (
-            <li key={item.id} className="flex flex-col gap-2 rounded-lg border border-ink/30 px-4 py-3">
+            <li key={item.id} className="flex flex-col gap-2 rounded-xl border border-rule bg-card px-4 py-3">
               <p className="text-lg">{label}</p>
               {item.vet_instructions && <p className="text-base">Your vet&rsquo;s instructions: {item.vet_instructions}</p>}
               <RetireButton planItemId={item.id} />

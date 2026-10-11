@@ -7,7 +7,7 @@ import { TABS, tabFor } from "@/lib/app/nav";
 export function TabBar() {
   const current = tabFor(usePathname());
   return (
-    <nav aria-label="Tabs" className="border-t border-sand bg-paper pb-[env(safe-area-inset-bottom)]">
+    <nav aria-label="Tabs" className="border-t border-rule bg-paper pb-[env(safe-area-inset-bottom)]">
       <ul className="mx-auto grid max-w-md grid-cols-4">
         {TABS.map((tab) => {
           const active = current?.href === tab.href;
@@ -16,8 +16,8 @@ export function TabBar() {
               <Link
                 href={tab.href}
                 aria-current={active ? "page" : undefined}
-                className={`flex min-h-14 items-center justify-center px-1 text-center text-base ${
-                  active ? "font-semibold text-green underline underline-offset-4" : "text-ink"
+                className={`flex min-h-[60px] items-center justify-center px-1 text-center text-base ${
+                  active ? "font-bold text-green underline decoration-2 underline-offset-[6px]" : "text-ink"
                 }`}
               >
                 {tab.label}

@@ -4,8 +4,8 @@ import { useActionState } from "react";
 import { type EventState, addStressEvent } from "./actions";
 
 const field =
-  "w-full rounded-lg border border-ink/30 bg-paper px-4 py-3 text-lg focus:border-green focus:outline-2 focus:outline-green";
-const primary = "min-h-12 w-full rounded-lg bg-green px-4 py-3 text-lg font-semibold text-paper disabled:opacity-60";
+  "w-full rounded-lg border border-rule-strong bg-card px-4 py-3 text-lg focus:border-green focus:outline-2 focus:outline-green";
+const primary = "min-h-12 w-full rounded-2xl bg-green px-4 py-3 text-lg font-semibold text-paper disabled:opacity-60";
 
 /** Plan a stressful event, such as kennels or fireworks: what it is and its dates. */
 export function StressEventForm({ dogId, today }: { dogId: string; today: string }) {

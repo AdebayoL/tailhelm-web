@@ -217,18 +217,18 @@ async function TodayBoard({
           <section className="card lg stack-12 o-5 f-5w" aria-label="Today's check">
             <div className="stack-4">
               <h2 className="r-h">Today&rsquo;s check</h2>
-              <p className="hint">Tick what you&rsquo;ve noticed. Kept as notes for your vet.</p>
+              <p className="hint">Tick what you&rsquo;ve noticed, then save. Kept in the day&rsquo;s notes for your vet.</p>
             </div>
             <QuickCheck
               conditionId={plan.condition.id}
-              myName={myName}
-              timeZone={input.timeZone}
+              day={weekdayDayMonth(today.date)}
+              storageKey={`th-check:${plan.condition.id}:${today.date}`}
               rows={signs.signs.map((s) => {
                 const t = ticks[s.key];
                 return {
                   key: s.key,
                   label: s.label,
-                  by: t ? `${nameOf(t.by)}, ${toLocal(new Date(t.at), input.timeZone).time}` : null,
+                  by: t ? `${t.by === input.me ? "You" : nameOf(t.by)}, ${toLocal(new Date(t.at), input.timeZone).time}` : null,
                   mine: t?.mine ?? false,
                 };
               })}
@@ -239,9 +239,15 @@ async function TodayBoard({
                 <p>{alert}</p>
               </div>
             )}
-            <SheetLink label="Add a note" icon="add">
-              <NoteForm dogId={dog.id} today={today.date} />
-            </SheetLink>
+            <div className="link-row">
+              <SheetLink label="Add a note" icon="add">
+                <NoteForm dogId={dog.id} today={today.date} />
+              </SheetLink>
+              <Link className="lnk" href="/today/past">
+                Past days
+                <Icon name="open" />
+              </Link>
+            </div>
           </section>
         )}
 
@@ -296,9 +302,15 @@ async function TodayBoard({
               <Link href="/dog">add it in their words</Link>.
             </p>
           )}
-          <SheetLink label="Add a stressful day" icon="add">
-            <StressEventForm dogId={dog.id} today={today.date} />
-          </SheetLink>
+          <div className="link-row">
+            <SheetLink label="Add a stressful day" icon="add">
+              <StressEventForm dogId={dog.id} today={today.date} />
+            </SheetLink>
+            <Link className="lnk" href="/today/past">
+              Past days
+              <Icon name="open" />
+            </Link>
+          </div>
         </section>
 
         {(today.tests.length > 0 || lastResultOn) && (

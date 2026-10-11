@@ -15,7 +15,7 @@ const PLUS = [
   "Full history, kept for as long as your account exists",
   "Observations across the full history. Observations get stronger with more history.",
   "Results, charts, the injection-cycle overlay and trend notices for all time",
-  "Unlimited designed vet reports, sent straight to the clinic",
+  "Unlimited designed vet reports, ready to download and send to your vet",
   "Appointment preparation: a report prepared for you, and three things worth asking",
   "Unlimited sitter pages",
   "The stress-event planner",

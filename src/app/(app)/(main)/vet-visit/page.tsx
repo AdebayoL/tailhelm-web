@@ -4,6 +4,7 @@ import { Fragment, Suspense } from "react";
 import { Icon } from "@/app/_components/icon";
 import { type LocalDate, addDays, toLocal } from "@/engine/time";
 import { dayMonth, monthYear, weekdayDate } from "@/lib/app/dates";
+import { jewelClass } from "@/lib/app/jewel";
 import { getShell } from "@/lib/app/shell";
 import { joinNames } from "@/lib/app/words";
 import { telHref } from "@/lib/dogs/input";
@@ -215,7 +216,7 @@ async function VetVisit() {
               >
                 <div className="kicker">
                   <span>Last treatment</span>
-                  <span>{c.item.product}</span>
+                  <span className={jewelClass(c.item.schedule_json)}>{c.item.product}</span>
                 </div>
                 {last ? (
                   <>
@@ -266,7 +267,7 @@ async function VetVisit() {
                   const line = planLine(item);
                   return (
                     <li key={item.id} className="tn">
-                      <b className="w6">{line.name}</b> {line.rest}
+                      <b className={`w6 ${jewelClass(item.schedule_json)}`}>{line.name}</b> {line.rest}
                       {line.set && (
                         <>
                           {" "}
@@ -320,7 +321,7 @@ async function VetVisit() {
                       <span className="rec-time">{d.slot}</span>
                       <div className="vv-dose-what">
                         <p className="rec-med">
-                          <b>{planLine(item).name}</b>
+                          <b className={jewelClass(item.schedule_json)}>{planLine(item).name}</b>
                           {amount && ` ${amount}`}
                         </p>
                         <p
@@ -355,7 +356,7 @@ async function VetVisit() {
               style={{ flex: "1 1 440px" }}
             >
               <div className="kicker">
-                <span>Latest results</span>
+                <span className="m-meas">Latest results</span>
               </div>
               <p>No lab reports recorded yet.</p>
             </section>
@@ -514,7 +515,7 @@ function WeightCard({
       style={{ flex: "1 1 300px" }}
     >
       <div className="kicker">
-        <span>Weight</span>
+        <span className="m-meas">Weight</span>
       </div>
       {rows.length === 0 ? (
         <p>No weights recorded yet.</p>
@@ -575,7 +576,7 @@ function ResultsCard({
       style={{ flex: "1 1 440px" }}
     >
       <div className="kicker">
-        <span>Latest results</span>
+        <span className="m-meas">Latest results</span>
         <span className="chip chip-outline">
           Lab report, {formatDate(local(report.taken_at).date)}
         </span>

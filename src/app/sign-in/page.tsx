@@ -9,7 +9,7 @@ export const metadata: Metadata = { title: "Sign in · Tailhelm" };
 
 export default function SignInPage({ searchParams }: PageProps<"/sign-in">) {
   const side = (
-    <aside className="auth-side">
+    <aside className="auth-side ink lit">
       <Link className="wm" href="/" aria-label="Tailhelm home">
         <Wordmark size={32} textStyle={{ fontSize: 26, lineHeight: "32px" }} />
       </Link>

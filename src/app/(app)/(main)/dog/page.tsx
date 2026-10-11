@@ -4,6 +4,7 @@ import { Icon } from "@/app/_components/icon";
 import { SheetClose, SheetLink } from "@/app/_components/sheet-link";
 import { addDays, toLocal } from "@/engine/time";
 import { dayMonth, monthYear, weekdayDate } from "@/lib/app/dates";
+import { jewelClass } from "@/lib/app/jewel";
 import { initial } from "@/lib/app/words";
 import { requireOwner } from "@/lib/auth/session";
 import { hoursLines } from "@/lib/dogs/hours";
@@ -80,6 +81,8 @@ async function DogContent() {
       sub={<span className="d-only">Profile, vets and care plan · {weekdayDate(today)}</span>}
       lead={avatar}
       dog
+      space={16}
+      band="overlap"
     >
       <div className="d-row">
         <section className="card lg stack-16" aria-label="Profile" style={{ flex: "5 1 380px" }}>
@@ -289,7 +292,7 @@ function CarePlan({
                       <>
                         <span className="stack-4">
                           <span className="tn" style={{ textWrap: "pretty" }}>
-                            <b className="w6">{line.name}</b> {line.rest}
+                            <b className={`w6 ${jewelClass(item.schedule_json)}`}>{line.name}</b> {line.rest}
                             {line.set && (
                               <>
                                 {" "}

@@ -183,7 +183,7 @@ export function DoseList({
               <span className="rec-time">{r.slot}</span>
               <div>
                 <p className="rec-med">
-                  <b>{r.med}</b>
+                  <b className={`m-${r.jewel}`}>{r.med}</b>
                   {r.amount && ` ${r.amount}`}
                 </p>
                 <p className={r.kind === "due" ? "st" : `st ${r.kind}`}>
@@ -208,7 +208,7 @@ export function DoseList({
         <SyncLine shared={shared} at={at} />
       </section>
 
-      <section className="card lg stack-24 d-only" aria-label="Today's doses">
+      <section className="card lg stack-24 d-only acc-pred" aria-label="Today's doses">
         <div className="sec-h">
           <h2 className="d-h">Today&rsquo;s doses</h2>
           <span className="sec-meta" style={{ fontSize: 16 }}>
@@ -222,8 +222,12 @@ export function DoseList({
             {[0, 25, 50, 75, 100].map((p) => (
               <span key={p} className="rail-tick" style={{ left: `${p}%` }} />
             ))}
-            {["00:00", "06:00", "12:00", "18:00", "24:00"].map((h, i) => (
-              <span key={h} className={i === 0 ? "rail-hour first" : i === 4 ? "rail-hour last" : "rail-hour"} style={{ left: `${i * 25}%` }}>
+            {["00:00", "03:00", "06:00", "09:00", "12:00", "15:00", "18:00", "21:00", "24:00"].map((h, i) => (
+              <span
+                key={h}
+                className={i === 0 ? "rail-hour first" : i === 8 ? "rail-hour last" : i % 2 ? "rail-hour minor" : "rail-hour"}
+                style={{ left: `${i * 12.5}%` }}
+              >
                 {h}
               </span>
             ))}
@@ -278,7 +282,7 @@ export function DoseList({
                 {r.slot}
               </span>
               <span role="cell">
-                <b className="w6">{r.med}</b>
+                <b className={`w6 m-${r.jewel}`}>{r.med}</b>
                 {r.amount && ` ${r.amount}`}
               </span>
               <span role="cell" className={`st ${r.kind}`}>
@@ -320,7 +324,7 @@ export function DoseList({
           by={state.alreadyGiven.by}
           at={state.alreadyGiven.at}
           slot={guard.row.slot}
-          med={{ name: guard.row.med, amount: guard.row.amount }}
+          med={{ name: guard.row.med, amount: guard.row.amount, jewel: guard.row.jewel }}
           dogName={dogName}
           vet={vet}
           onClose={() => setGuard(null)}
@@ -364,7 +368,7 @@ function SecondDoseSheet({
               <label key={r.key} className="radio">
                 <input type="radio" name="pick" value={r.key} checked={pick === r.key} onChange={() => setPick(r.key)} />
                 <span className="tn">
-                  {r.slot} · <b className="w6">{r.med}</b>
+                  {r.slot} · <b className={`w6 m-${r.jewel}`}>{r.med}</b>
                   {r.amount && ` ${r.amount}`}
                 </span>
               </label>

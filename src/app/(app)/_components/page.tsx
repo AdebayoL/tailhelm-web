@@ -12,16 +12,21 @@ import { OwnerOnly } from "./owner-only";
 export function Page({
   title,
   sub,
+  note,
   subLarge = false,
   lead,
   aside,
   actions,
   dog = false,
   space = 32,
+  band,
+  instrument,
   children,
 }: {
   title: ReactNode;
   sub?: ReactNode;
+  /** A line under the sub line, such as the injection cycle on Today. */
+  note?: ReactNode;
   /** The sub line at reading size on a phone too, as on Care team. */
   subLarge?: boolean;
   /** Before the title, such as the dog's avatar on the Dog tab. */
@@ -34,34 +39,55 @@ export function Page({
   dog?: boolean;
   /** The space between the title and the first card on a phone. */
   space?: 16 | 24 | 32;
+  /**
+   * How the first card meets the title band on a phone: "overlap" rides it up
+   * over the foot of the band; "hero" runs the band behind half of it, as on Today.
+   */
+  band?: "overlap" | "hero";
+  /** Live figures under the title in the desktop top bar, as on Today. */
+  instrument?: ReactNode;
   children?: ReactNode;
 }) {
   const heading = (
     <div>
       <h1 className="d-title">{title}</h1>
       {sub && <p className={subLarge ? "d-sub lg" : "d-sub"}>{sub}</p>}
+      {note}
     </div>
   );
+  const top = (
+    <>
+      {lead ? (
+        <div className={instrument ? "top-id" : "row gap-16"}>
+          {lead}
+          {heading}
+        </div>
+      ) : (
+        heading
+      )}
+      {aside}
+      {actions ? (
+        <div className="row gap-16 topbar-em" style={{ flexWrap: "wrap" }}>
+          {actions}
+          <EmergencyButton />
+        </div>
+      ) : (
+        <EmergencyButton className="topbar-em" />
+      )}
+    </>
+  );
+  const classes = ["topbar", dog && "is-dog", band, instrument && "instrument"].filter(Boolean).join(" ");
   return (
     <main className="page">
       <OwnerOnly />
-      <header className={dog ? "topbar is-dog" : "topbar"}>
-        {lead ? (
-          <div className="row gap-16">
-            {lead}
-            {heading}
-          </div>
+      <header className={classes}>
+        {instrument ? (
+          <>
+            <div className="top-row">{top}</div>
+            {instrument}
+          </>
         ) : (
-          heading
-        )}
-        {aside}
-        {actions ? (
-          <div className="row gap-16 topbar-em" style={{ flexWrap: "wrap" }}>
-            {actions}
-            <EmergencyButton />
-          </div>
-        ) : (
-          <EmergencyButton className="topbar-em" />
+          top
         )}
       </header>
       <PageStatus />

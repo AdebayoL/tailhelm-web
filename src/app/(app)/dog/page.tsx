@@ -111,6 +111,14 @@ async function Account() {
     <section className="flex flex-col gap-2 border-t border-sand pt-6">
       <h2 className="text-xl font-semibold">Your account</h2>
       <p className="text-lg">Signed in as {owner.email ?? "you"}.</p>
+      <h3 className="pt-2 text-lg font-semibold">Your records</h3>
+      <p className="text-lg">
+        Download everything Tailhelm holds about your dogs as one spreadsheet file. It is free on every plan.
+      </p>
+      {/* A plain link: the file downloads, so there is no page to prefetch. */}
+      <a href="/dog/export" download className="min-h-12 text-lg text-green underline underline-offset-4">
+        Download all records (CSV)
+      </a>
       <form action={signOut}>
         <button type="submit" className="min-h-12 text-lg text-green underline underline-offset-4">
           Sign out

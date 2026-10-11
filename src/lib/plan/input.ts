@@ -255,7 +255,7 @@ function joinTimes(times: string[]): string {
   return times.length === 1 ? times[0] : `${times.slice(0, -1).join(", ")} and ${times[times.length - 1]}`;
 }
 
-function describeSchedule(schedule: PlanSchedule): string {
+export function describeSchedule(schedule: PlanSchedule): string {
   switch (schedule.kind) {
     case "fixed": {
       const n = schedule.times.length;

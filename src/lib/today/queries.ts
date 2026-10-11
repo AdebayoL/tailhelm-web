@@ -7,7 +7,9 @@ import { type DogPlan, getDogPlan } from "@/lib/plan/queries";
 import { signsType } from "@/lib/signs/signs";
 import { createClient } from "@/lib/supabase/server";
 import { getPack } from "@/packs/registry";
+import { NOTE_KIND } from "@/lib/notes/input";
 import { type InjectionInfo, getInjectionInfo } from "@/lib/treatments/queries";
+import { PAST_DAYS } from "./past";
 import { type PlannedEvent, type Tick, type TodayInput } from "./today";
 
 export type QuickCheck = {
@@ -172,4 +174,45 @@ async function getQuickChecks(
     .order("taken_at", { ascending: false });
   if (error) throw new Error(`Could not load today's checks: ${error.message}`);
   return (data ?? []) as QuickCheck[];
+}
+
+/** The signs ticked, notes and stressful days for Past days, from the start of the window. */
+export async function getPastRecords(
+  dogId: string,
+  conditionId: string | null,
+  typeKey: string | null,
+  timeZone: string,
+  now: Date,
+) {
+  const supabase = await createClient();
+  const from = zonedTimeToInstant(addDays(toLocal(now, timeZone).date, -(PAST_DAYS - 1)), "00:00", timeZone).toISOString();
+  const [checks, notes, stress] = await Promise.all([
+    conditionId && typeKey
+      ? supabase
+          .from("observations")
+          .select("taken_at, values_json, recorded_by")
+          .eq("dog_condition_id", conditionId)
+          .eq("type_key", typeKey)
+          .gte("taken_at", from)
+      : Promise.resolve({ data: [], error: null }),
+    supabase
+      .from("events")
+      .select("id, started_at, note, recorded_by, created_at")
+      .eq("dog_id", dogId)
+      .eq("kind", NOTE_KIND)
+      .gte("started_at", from),
+    supabase
+      .from("events")
+      .select("id, note, started_at, ended_at")
+      .eq("dog_id", dogId)
+      .eq("kind", STRESS_EVENT_KIND)
+      .or(`started_at.gte.${from},ended_at.gte.${from}`),
+  ]);
+  const failed = checks.error ?? notes.error ?? stress.error;
+  if (failed) throw new Error(`Could not load past days: ${failed.message}`);
+  return {
+    checks: (checks.data ?? []) as { taken_at: string; values_json: Record<string, boolean>; recorded_by: string | null }[],
+    notes: (notes.data ?? []) as { id: string; started_at: string; note: string; recorded_by: string | null; created_at: string | null }[],
+    stress: (stress.data ?? []) as { id: string; note: string | null; started_at: string; ended_at: string | null }[],
+  };
 }

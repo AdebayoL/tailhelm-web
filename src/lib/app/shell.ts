@@ -38,7 +38,7 @@ export const getShell = cache(async (): Promise<Shell> => {
       conditionShort: key && conditionShortName(key),
     },
     me: {
-      name: myName ?? owner.email ?? "You",
+      name: myName ?? owner.email?.split("@")[0] ?? "You",
       role: members.find((m) => m.profile_id === owner.userId)?.role === "member" ? "Member" : "Owner",
     },
     shared: joinNames(otherNames(current, owner.userId)),

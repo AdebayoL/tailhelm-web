@@ -9,17 +9,22 @@ import { EmergencyButton } from "./emergency-button";
 /**
  * The phone header: the wordmark at the left margin and Emergency at the
  * right, in the same place on every screen. The Dog tab's own screens lead
- * with a way back to Dog; the vet visit, handed to a vet, keeps only the name.
+ * with a way back to Dog, and Past days with a way back to Today; the vet visit, handed to a vet, keeps only the name.
  */
 export function AppHeader() {
   const pathname = usePathname();
-  const back = pathname === "/reminders" || pathname === "/vet-visit";
+  const back =
+    pathname === "/reminders" || pathname === "/vet-visit"
+      ? { href: "/dog", label: "Dog" }
+      : pathname === "/today/past"
+        ? { href: "/today", label: "Today" }
+        : null;
   return (
     <header className="hdr app-hdr">
       {back ? (
-        <Link className="back" href="/dog">
+        <Link className="back" href={back.href}>
           <Icon name="back" />
-          Dog
+          {back.label}
         </Link>
       ) : (
         <Link className="wm" href="/today" aria-label="Tailhelm, Today">

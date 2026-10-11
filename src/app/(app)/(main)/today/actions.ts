@@ -253,8 +253,6 @@ export async function logInjection(
   return { savedAt: Date.now() };
 }
 
-export type CheckState = { failed?: boolean };
-
 /** The dog's condition and its checklist, checked against the pack. */
 async function checkCondition(conditionId: string) {
   const supabase = await createClient();
@@ -271,63 +269,69 @@ async function checkCondition(conditionId: string) {
   return { supabase, condition, type };
 }
 
-/**
- * Ticks one sign on today's check. Each tick is its own record with who made
- * it and when, so two people checking the dog on the same day both show.
- */
-export async function tickSign(form: FormData): Promise<CheckState> {
-  await requireOwner();
-  const found = await checkCondition(String(form.get("dog_condition_id") ?? ""));
-  const sign = String(form.get("sign") ?? "");
-  if (!found || !found.type.signs.some((s) => s.key === sign)) return { failed: true };
-  const { error } = await found.supabase.from("observations").insert({
-    dog_condition_id: found.condition.id,
-    type_key: found.type.key,
-    taken_at: new Date().toISOString(),
-    values_json: { [sign]: true },
-  });
-  if (error) {
-    console.error("[today] tick sign failed", { code: error.code, message: error.message });
-    return { failed: true };
-  }
-  refresh();
-  return {};
-}
-
-/** Unticks a sign the signed-in person ticked today. Anyone else's tick stays. */
-export async function untickSign(form: FormData): Promise<CheckState> {
-  const owner = await requireOwner();
-  const found = await checkCondition(String(form.get("dog_condition_id") ?? ""));
-  const sign = String(form.get("sign") ?? "");
-  if (!found) return { failed: true };
-  const timeZone = await getTimeZone(owner.userId);
-  const now = new Date();
-  const dayStart = zonedTimeToInstant(toLocal(now, timeZone).date, "00:00", timeZone);
+/** Takes signs off the signed-in person's ticks from today. Anyone else's tick stays. */
+async function untickMine(
+  found: NonNullable<Awaited<ReturnType<typeof checkCondition>>>,
+  userId: string,
+  signs: string[],
+): Promise<boolean> {
+  const timeZone = await getTimeZone(userId);
+  const dayStart = zonedTimeToInstant(toLocal(new Date(), timeZone).date, "00:00", timeZone);
   const { data, error } = await found.supabase
     .from("observations")
     .select("id, values_json")
     .eq("dog_condition_id", found.condition.id)
     .eq("type_key", found.type.key)
-    .eq("recorded_by", owner.userId)
+    .eq("recorded_by", userId)
     .gte("taken_at", dayStart.toISOString());
   if (error) {
     console.error("[today] untick sign failed", { code: error.code, message: error.message });
-    return { failed: true };
+    return false;
   }
   for (const row of (data ?? []) as { id: string; values_json: Record<string, boolean> }[]) {
-    if (!row.values_json[sign]) continue;
-    const rest = Object.fromEntries(Object.entries(row.values_json).filter(([k]) => k !== sign));
+    if (!signs.some((s) => row.values_json[s])) continue;
+    const rest = Object.fromEntries(Object.entries(row.values_json).filter(([k]) => !signs.includes(k)));
     const done =
       Object.keys(rest).length === 0
         ? await found.supabase.from("observations").delete().eq("id", row.id)
         : await found.supabase.from("observations").update({ values_json: rest }).eq("id", row.id);
     if (done.error) {
       console.error("[today] untick sign failed", { code: done.error.code, message: done.error.message });
+      return false;
+    }
+  }
+  return true;
+}
+
+export type SaveCheckState = { failed?: boolean; savedAt?: number; added?: string[]; removed?: string[] };
+
+/**
+ * Saves the changes made on today's check in one go: the signs newly ticked
+ * become one record with who saved them and when, and the person's own ticks
+ * they took off are removed.
+ */
+export async function saveCheck(form: FormData): Promise<SaveCheckState> {
+  const owner = await requireOwner();
+  const found = await checkCondition(String(form.get("dog_condition_id") ?? ""));
+  if (!found) return { failed: true };
+  const known = (key: string) => found.type.signs.some((s) => s.key === key);
+  const add = [...new Set(form.getAll("add").map(String))].filter(known);
+  const remove = [...new Set(form.getAll("remove").map(String))].filter((k) => known(k) && !add.includes(k));
+  if (add.length > 0) {
+    const { error } = await found.supabase.from("observations").insert({
+      dog_condition_id: found.condition.id,
+      type_key: found.type.key,
+      taken_at: new Date().toISOString(),
+      values_json: Object.fromEntries(add.map((k) => [k, true])),
+    });
+    if (error) {
+      console.error("[today] save check failed", { code: error.code, message: error.message });
       return { failed: true };
     }
   }
+  if (remove.length > 0 && !(await untickMine(found, owner.userId, remove))) return { failed: true };
   refresh();
-  return {};
+  return { savedAt: Date.now(), added: add, removed: remove };
 }
 
 export type EventState = {

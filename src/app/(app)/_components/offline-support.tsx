@@ -2,10 +2,11 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, useSyncExternalStore } from "react";
+import { Icon } from "@/app/_components/icon";
 import { keptPageSavedAt, startOfflineSupport } from "@/lib/offline/client";
 import { type Outcome, QUEUE_CHANGED, dismissOutcome, outcomes, queuedTicks } from "@/lib/offline/queue";
 import { sendWaitingTicks } from "@/lib/offline/sync";
-import { offlineBannerText } from "@/lib/offline/text";
+import { offlineBannerText, offlineUnseenText } from "@/lib/offline/text";
 
 function subscribe(onChange: () => void) {
   window.addEventListener("online", onChange);
@@ -16,14 +17,12 @@ function subscribe(onChange: () => void) {
   };
 }
 
-const link = "min-h-12 text-lg text-green underline underline-offset-4";
-
 /**
  * Registers the service worker, says when the phone has no signal, sends
  * ticks made with no signal once there is one, and says if any could not be
  * recorded as made.
  */
-export function OfflineSupport() {
+export function OfflineSupport({ shared = "" }: { shared?: string }) {
   const pathname = usePathname();
   const router = useRouter();
   const offline = useSyncExternalStore(
@@ -74,22 +73,32 @@ export function OfflineSupport() {
     };
   }, [offline, pathname]);
 
+  if (!offline && notes.length === 0) return null;
+  const unseen = offlineUnseenText(shared);
   return (
-    <>
+    <div className="app-status stack-8">
       {offline && (
-        <p role="status" className="bg-sand px-4 py-2 text-center text-base text-ink">
-          {offlineBannerText(savedAt, new Date())}
-          {waiting > 0 && ` ${waiting === 1 ? "1 tick is" : `${waiting} ticks are`} waiting to be sent.`}
-        </p>
+        <div className="banner banner-warn" role="status">
+          <Icon name="noSignal" />
+          <div className="stack-4">
+            <p className="tn r-lead">
+              <b>No signal.</b> {offlineBannerText(savedAt, new Date())}
+            </p>
+            {unseen && <p className="r-sm">{unseen}</p>}
+          </div>
+        </div>
       )}
       {notes.map((n) => (
-        <div key={n.id} role="alert" className="mx-auto flex max-w-md flex-col gap-1 border-2 border-alert-amber px-4 py-3">
-          <p className="text-lg font-semibold">{n.text}</p>
-          <button type="button" onClick={() => void dismissOutcome(n.id)} className={`${link} self-start`}>
-            OK
-          </button>
+        <div key={n.id} className="banner banner-warn" role="alert">
+          <Icon name="attention" />
+          <div className="stack-4">
+            <p className="tn">{n.text}</p>
+            <button type="button" onClick={() => void dismissOutcome(n.id)} className="lnk" style={{ minHeight: 40, alignSelf: "flex-start" }}>
+              OK
+            </button>
+          </div>
         </div>
       ))}
-    </>
+    </div>
   );
 }

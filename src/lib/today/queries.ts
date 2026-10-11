@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { addDays, toLocal, zonedTimeToInstant } from "@/engine/time";
 import { requireOwner } from "@/lib/auth/session";
 import { type Dog, getMyDog } from "@/lib/dogs/queries";
@@ -28,7 +29,7 @@ export type TodayData = {
 };
 
 /** The signed-in owner's time zone; every member sees the dog's day on their own clock. */
-export async function getTimeZone(userId: string): Promise<string> {
+export const getTimeZone = cache(async (userId: string): Promise<string> => {
   const supabase = await createClient();
   const { data } = await supabase
     .from("profiles")
@@ -36,11 +37,11 @@ export async function getTimeZone(userId: string): Promise<string> {
     .eq("id", userId)
     .maybeSingle<{ timezone: string }>();
   return data?.timezone ?? "Europe/London";
-}
+});
 
-export async function householdNames(
+export const householdNames = cache(async (
   dogId: string,
-): Promise<Record<string, string>> {
+): Promise<Record<string, string>> => {
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("household_names", { dog: dogId });
   if (error) throw new Error(`Could not load the household: ${error.message}`);
@@ -50,7 +51,7 @@ export async function householdNames(
       r.name,
     ]),
   );
-}
+});
 
 /** Everything the Today screen needs, read under row-level security. */
 export async function getTodayData(): Promise<TodayData | null> {

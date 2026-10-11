@@ -255,17 +255,33 @@ function joinTimes(times: string[]): string {
   return times.length === 1 ? times[0] : `${times.slice(0, -1).join(", ")} and ${times[times.length - 1]}`;
 }
 
-export function describeSchedule(schedule: PlanSchedule): string {
+/** How often, without the times: "twice daily", "every 28 days". */
+export function howOften(schedule: PlanSchedule): string {
   switch (schedule.kind) {
     case "fixed": {
       const n = schedule.times.length;
-      const often = n === 1 ? "once a day" : n === 2 ? "twice a day" : `${n} times a day`;
-      return `${often} at ${joinTimes(schedule.times)}`;
+      return n === 1 ? "once daily" : n === 2 ? "twice daily" : `${n} times daily`;
     }
+    case "interval":
+      return `every ${schedule.everyDays} days`;
+    default:
+      return describeSchedule(schedule);
+  }
+}
+
+/** The times a fixed schedule is due, as "08:00 and 18:00". */
+export function scheduleTimes(times: string[]): string {
+  return joinTimes(times);
+}
+
+export function describeSchedule(schedule: PlanSchedule): string {
+  switch (schedule.kind) {
+    case "fixed":
+      return `${howOften(schedule)} at ${joinTimes(schedule.times)}`;
     case "interval":
       return `every ${schedule.everyDays} days, reminder at ${schedule.time}`;
     case "offset":
-      return `on days ${joinTimes(schedule.offsetsDays.map(String))} after an injection`;
+      return `on ${schedule.offsetsDays.length === 1 ? "day" : "days"} ${joinTimes(schedule.offsetsDays.map(String))} after an injection`;
     case "series":
       return `${schedule.readings} readings, ${schedule.everyMinutes} minutes apart`;
     case "event":
@@ -275,7 +291,47 @@ export function describeSchedule(schedule: PlanSchedule): string {
 
 const formatAmount = (n: number) => String(Number(n.toFixed(3)));
 
-/** The plan item exactly as entered, e.g. "Prednisolone 5 mg tablets, 2.5 mg once a day at 08:00 (set by vet 12 Sep 2026)". */
+/** The amount the vet set, as the owner typed it: "2.5 mg". Null when none was entered. */
+export function doseText(item: { dose_amount: number | null; dose_unit: string | null }): string | null {
+  return item.dose_amount !== null && item.dose_unit ? `${formatAmount(item.dose_amount)} ${item.dose_unit}` : null;
+}
+
+/** "(set by vet 12 Sep 2026)", or null when the date was not entered. */
+export function setByVetText(item: { set_by_vet_on: string | null }): string | null {
+  return item.set_by_vet_on ? `(set by vet ${formatDate(item.set_by_vet_on)})` : null;
+}
+
+/**
+ * A plan item as one line of the care plan, in three parts: "**Prednisolone**
+ * 2.5 mg twice daily (set by vet 12 Sep 2026)". The amount is the owner's, as
+ * typed; for a stressful-day plan the rest is the vet's own words.
+ */
+export function planLine(item: {
+  product: string | null;
+  dose_amount: number | null;
+  dose_unit: string | null;
+  schedule_json: PlanSchedule;
+  set_by_vet_on: string | null;
+  vet_instructions?: string | null;
+}): { name: string; rest: string; set: string | null } {
+  const name = item.product ?? "Medicine";
+  const dose = doseText(item);
+  const set = setByVetText(item);
+  const s = item.schedule_json;
+  const join = (...parts: (string | null)[]) => parts.filter(Boolean).join(" ");
+  switch (s.kind) {
+    case "fixed":
+      return { name, rest: join(dose, howOften(s)), set };
+    case "interval":
+      return { name, rest: join(dose, "injection", howOften(s)), set };
+    case "event":
+      return { name: `${name} on stressful days`, rest: item.vet_instructions ?? "", set };
+    default:
+      return { name, rest: join(dose, describeSchedule(s)), set };
+  }
+}
+
+/** The plan item exactly as entered, e.g. "Prednisolone 5 mg tablets, 2.5 mg once daily at 08:00 (set by vet 12 Sep 2026)". */
 export function describePlanItem(item: {
   product: string | null;
   strength: string | null;
@@ -285,7 +341,7 @@ export function describePlanItem(item: {
   set_by_vet_on: string | null;
 }): string {
   const name = [item.product, item.strength].filter(Boolean).join(" ");
-  const dose = item.dose_amount !== null && item.dose_unit ? `${formatAmount(item.dose_amount)} ${item.dose_unit}` : null;
+  const dose = doseText(item);
   const what = dose ? `${name}, ${dose}` : name;
   const set = item.set_by_vet_on ? ` (set by vet ${formatDate(item.set_by_vet_on)})` : "";
   if (item.schedule_json.kind === "event") return `${what}${set}`;

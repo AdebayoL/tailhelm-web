@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import type { PlanSchedule } from "@/engine/schedule";
 import { createClient } from "@/lib/supabase/server";
 
@@ -20,12 +21,14 @@ export type PlanItem = {
   schedule_json: PlanSchedule;
   set_by_vet_on: string | null;
   vet_instructions: string | null;
+  /** Who in the household entered it. */
+  created_by: string | null;
 };
 
 export type DogPlan = { condition: DogCondition; items: PlanItem[] };
 
 /** The dog's condition and the plan items in use now. Row-level security limits both to the household. */
-export async function getDogPlan(dogId: string): Promise<DogPlan | null> {
+export const getDogPlan = cache(async (dogId: string): Promise<DogPlan | null> => {
   const supabase = await createClient();
   const { data: condition, error } = await supabase
     .from("dog_conditions")
@@ -39,7 +42,7 @@ export async function getDogPlan(dogId: string): Promise<DogPlan | null> {
 
   const { data, error: itemsError } = await supabase
     .from("plan_items")
-    .select("id, pack_key, product, strength, dose_amount, dose_unit, schedule_json, set_by_vet_on, vet_instructions")
+    .select("id, pack_key, product, strength, dose_amount, dose_unit, schedule_json, set_by_vet_on, vet_instructions, created_by")
     .eq("dog_condition_id", condition.id)
     .eq("active", true)
     .order("created_at");
@@ -51,4 +54,4 @@ export async function getDogPlan(dogId: string): Promise<DogPlan | null> {
     condition,
     items: (items ?? []).map((i) => ({ ...i, dose_amount: i.dose_amount === null ? null : Number(i.dose_amount) })),
   };
-}
+});

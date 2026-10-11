@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { CONDITION_NAMES } from "./names";
 import type { ConditionPack } from "./schema";
 
 /**
@@ -8,10 +9,7 @@ import type { ConditionPack } from "./schema";
  * migration.
  */
 
-/** Names shown to owners. A condition gets one here when its first pack is written. */
-export const CONDITION_NAMES: Record<string, string> = {
-  addisons: "Addison's disease",
-};
+export { CONDITION_NAMES };
 
 export function packFingerprint(pack: unknown): string {
   return createHash("sha256").update(JSON.stringify(pack)).digest("hex");

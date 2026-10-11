@@ -66,3 +66,36 @@ export async function getInjectionInfo(
     info[v.plan_item_id]?.vials.push(v);
   return info;
 }
+
+export type LastTick = { plan_item_id: string; given_at: string; given_on: string; given_by: string | null; given_by_profile: string | null };
+
+/** The latest record of each plan item being given, for the emergency card. */
+export async function getLastGiven(itemIds: string[]): Promise<Record<string, LastTick>> {
+  if (itemIds.length === 0) return {};
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("treatments")
+    .select("plan_item_id, given_at, given_on, given_by, given_by_profile")
+    .in("plan_item_id", itemIds)
+    .order("given_at", { ascending: false })
+    .limit(itemIds.length * 6);
+  if (error) throw new Error(`Could not load the last doses: ${error.message}`);
+  const last: Record<string, LastTick> = {};
+  for (const t of (data ?? []) as LastTick[]) last[t.plan_item_id] ??= t;
+  return last;
+}
+
+/** The days each injection on a cycle was given, from a date on, for the weight chart. */
+export async function getInjectionDates(itemIds: string[], from: string): Promise<string[]> {
+  if (itemIds.length === 0) return [];
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("treatments")
+    .select("given_on")
+    .in("plan_item_id", itemIds)
+    .eq("slot", "injection")
+    .gte("given_on", from)
+    .order("given_on");
+  if (error) throw new Error(`Could not load injection dates: ${error.message}`);
+  return [...new Set(((data ?? []) as { given_on: string }[]).map((t) => t.given_on))];
+}

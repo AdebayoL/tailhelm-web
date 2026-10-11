@@ -48,3 +48,26 @@ export function signsAlertText(
   const words = labels.map((l, i) => (i === 0 ? l : l.charAt(0).toLowerCase() + l.slice(1)));
   return rule.ownerWording.replaceAll("{sign}", joinWords(words)).replaceAll("{date}", formatDate(date));
 }
+
+export type SignTick = { at: string; by: string | null; mine: boolean };
+
+/**
+ * Each sign ticked today: when it was first ticked and by whom, and whether
+ * the signed-in person ticked it, so they can untick their own.
+ */
+export function signTicks(
+  checks: { taken_at: string; values_json: Record<string, boolean>; recorded_by: string | null }[],
+  me: string,
+): Record<string, SignTick> {
+  const ticks: Record<string, SignTick> = {};
+  for (const c of [...checks].sort((a, b) => a.taken_at.localeCompare(b.taken_at))) {
+    for (const [key, on] of Object.entries(c.values_json)) {
+      if (!on) continue;
+      const first = ticks[key];
+      ticks[key] = first
+        ? { ...first, mine: first.mine || c.recorded_by === me }
+        : { at: c.taken_at, by: c.recorded_by, mine: c.recorded_by === me };
+    }
+  }
+  return ticks;
+}

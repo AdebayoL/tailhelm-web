@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { formatDate } from "@/lib/plan/input";
 import { getPack } from "@/packs/registry";
-import { parseSignsForm, signsAlertText, signsRule, signsType } from "./signs";
+import { parseSignsForm, signTicks, signsAlertText, signsRule, signsType } from "./signs";
 
 const BANNED = /\b(safe|normal|fine|good|bad|healthy|streak|compliance)\b/i;
 const pack = getPack("addisons");
@@ -39,5 +39,24 @@ describe("quick check", () => {
 
   it("says nothing when no sign was logged", () => {
     expect(signsAlertText(rule, [], type, "2026-10-10", formatDate)).toBeNull();
+  });
+});
+
+describe("signTicks", () => {
+  const checks: { taken_at: string; values_json: Record<string, boolean>; recorded_by: string | null }[] = [
+    { taken_at: "2026-10-11T11:40:00Z", values_json: { vomiting: true }, recorded_by: "me" },
+    { taken_at: "2026-10-11T07:05:00Z", values_json: { vomiting: true, lethargy: true }, recorded_by: "sam" },
+    { taken_at: "2026-10-11T08:00:00Z", values_json: {}, recorded_by: "sam" },
+  ];
+
+  it("keeps the first tick of each sign, and whether I ticked it too", () => {
+    expect(signTicks(checks, "me")).toEqual({
+      vomiting: { at: "2026-10-11T07:05:00Z", by: "sam", mine: true },
+      lethargy: { at: "2026-10-11T07:05:00Z", by: "sam", mine: false },
+    });
+  });
+
+  it("ignores checks saved with nothing noticed", () => {
+    expect(signTicks([checks[2]], "me")).toEqual({});
   });
 });

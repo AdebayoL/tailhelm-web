@@ -46,9 +46,10 @@ const OFFLINE_HTML = `<!doctype html>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>No signal · Tailhelm</title>
 <style>
-body{font-family:system-ui,sans-serif;background:#f7f3ec;color:#1b1b1a;margin:0;padding:24px;font-size:18px;line-height:1.5}
-@media (prefers-color-scheme:dark){body{background:#161513;color:#ece7df}a{color:#8fc9a8}}
-a{color:#1f4d3a;display:inline-block;min-height:48px;padding:12px 0}
+body{font-family:'Source Sans 3',-apple-system,'Segoe UI',system-ui,sans-serif;background:#F5F7FA;color:#182B3A;margin:0;padding:24px 20px;font-size:18px;line-height:26px}
+h1{font-size:28px;line-height:34px;font-weight:600}
+a{color:#17324D;font-weight:500;display:inline-block;min-height:48px;padding:12px 0;text-underline-offset:4px}
+@media (prefers-color-scheme:dark){body{background:#101922;color:#EFF4F7}a{color:#B7DCE0}}
 </style></head>
 <body><h1>No signal</h1>
 <p>This page has not been opened on this phone with a signal yet, so there is nothing saved to show.</p>

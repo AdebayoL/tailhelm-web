@@ -1,6 +1,7 @@
 /** Owner-facing wording for sign-in problems. Plain, with the next step stated. */
 export const MESSAGES = {
-  badEmail: "Enter the email address you want to sign in with.",
+  noEmail: "Enter your email address",
+  badEmail: "Enter an email address in the correct format, like name@example.co.uk",
   badCode: "Enter the 6-digit code from the email.",
   tooMany: "Too many codes have been sent to this address. Wait a few minutes, then ask for a new one.",
   wrongCode: "That code has expired or doesn't match. Check the latest email, or ask for a new code.",

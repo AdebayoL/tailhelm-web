@@ -2,7 +2,7 @@
  * Sends the ticks waiting on the phone. Browser-only.
  */
 import { formatDate } from "@/lib/plan/input";
-import { sendQueuedTick } from "@/app/(app)/today/actions";
+import { sendQueuedTick } from "@/app/(app)/(main)/today/actions";
 import { addOutcome, queuedTicks, removeQueuedTick } from "./queue";
 import { queuedTickOutcomeText } from "./ticks";
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { isProtectedPath } from "@/lib/auth/input";
-import { EMERGENCY_PATH, TABS, tabFor } from "./nav";
+import { EMERGENCY_PATH, MORE, TABS, sideItemFor, tabFor } from "./nav";
 
 const BANNED = ["safe", "normal", "fine", "streak", "compliance", "administer", "dosage"];
 
@@ -9,8 +9,8 @@ describe("navigation", () => {
     expect(TABS.map((t) => t.label)).toEqual(["Today", "Trends", "Care team", "Dog"]);
   });
 
-  it("keeps every tab and the emergency screen behind sign-in", () => {
-    for (const path of [...TABS.map((t) => t.href), EMERGENCY_PATH]) {
+  it("keeps every tab, the Dog tab's screens and the emergency screen behind sign-in", () => {
+    for (const path of [...TABS.map((t) => t.href), ...MORE.map((m) => m.href), EMERGENCY_PATH]) {
       expect(isProtectedPath(path)).toBe(true);
     }
   });
@@ -22,8 +22,16 @@ describe("navigation", () => {
     expect(tabFor(EMERGENCY_PATH)).toBeNull();
   });
 
+  it("counts the vet visit and reminders as the Dog tab on a phone, and as their own items in the sidebar", () => {
+    expect(tabFor("/reminders")?.label).toBe("Dog");
+    expect(tabFor("/vet-visit")?.label).toBe("Dog");
+    expect(sideItemFor("/reminders")).toBe("/reminders");
+    expect(sideItemFor("/trends")).toBe("/trends");
+    expect(sideItemFor(EMERGENCY_PATH)).toBeNull();
+  });
+
   it("uses none of the banned words", () => {
-    const text = TABS.flatMap((t) => [t.label, t.question]).join(" ").toLowerCase();
+    const text = [...TABS.flatMap((t) => [t.label, t.question]), ...MORE.map((m) => m.label)].join(" ").toLowerCase();
     for (const word of BANNED) expect(text).not.toMatch(new RegExp(`\\b${word}\\b`));
   });
 });

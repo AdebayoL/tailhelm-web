@@ -126,11 +126,11 @@ async function TrendsContent({ searchParams }: { searchParams: Promise<Record<st
   );
 
   return (
-    <Page title="Trends" sub={`${dog.name} · ${SUB}`} actions={<PeriodSwitch period={period} />}>
+    <Page title="Trends" sub={`${dog.name} · ${SUB}`} actions={<PeriodSwitch period={period} />} band="overlap">
       {weights.length === 0 ? (
         <section className="card lg stack-16" aria-label="Weight">
           <div className="kicker">
-            <span>Weight</span>
+            <span className="m-meas">Weight</span>
             <span className="tn">
               <span className="m-only">{periodText(period, from)}</span>
               <span className="d-only">{spanText(period, from, today)}</span>
@@ -222,7 +222,7 @@ function WeightCards({
     <div className="d-row">
       <section className="card lg stack-16 wt-card" aria-label="Weight" style={{ flex: "8 1 600px" }}>
         <div className="kicker">
-          <span>Weight</span>
+          <span className="m-meas">Weight</span>
           <span className="tn">
             <span className="m-only">{periodText(period, from)}</span>
             <span className="d-only">{spanText(period, from, today)}</span>
@@ -398,7 +398,7 @@ function LabCard({
     return (
       <section className="card lg stack-16" aria-label={type.name}>
         <div className="kicker">
-          <span>Blood tests</span>
+          <span className="m-meas">Blood tests</span>
         </div>
         <div className="stack-4">
           <h2 className="r-h">No lab reports yet</h2>
@@ -416,12 +416,12 @@ function LabCard({
   return (
     <section className="card lg stack-16" aria-label="Blood test results">
       <div className="kicker m-only">
-        <span>Blood tests</span>
+        <span className="m-meas">Blood tests</span>
         {chip}
       </div>
       <div className="row between" style={{ flexWrap: "wrap", gap: "8px 16px", alignItems: "baseline" }}>
         <div className="stack-4">
-          <h2 className="r-h tn">Lab report, {formatDate(local(latest.taken_at).date)}</h2>
+          <h2 className="r-h tn d-meas">Lab report, {formatDate(local(latest.taken_at).date)}</h2>
           <p className="prov">{typedIn(latest, local, who)}</p>
         </div>
         <span className="d-only">{chip}</span>

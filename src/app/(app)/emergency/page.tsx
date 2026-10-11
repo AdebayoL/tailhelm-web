@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { Icon } from "@/app/_components/icon";
 import { toLocal } from "@/engine/time";
 import { weekdayDate, weekdayDayMonth } from "@/lib/app/dates";
+import { jewelClass } from "@/lib/app/jewel";
 import { getShell } from "@/lib/app/shell";
 import { joinNames } from "@/lib/app/words";
 import { requireOwner } from "@/lib/auth/session";
@@ -189,7 +190,7 @@ async function Calls() {
                 return (
                   <div key={i.id} className="stack-4">
                     <p className="ty-lead tn">
-                      <b className="w6">{line.name}</b> {line.rest}
+                      <b className={`w6 ${jewelClass(i.schedule_json)}`}>{line.name}</b> {line.rest}
                       {line.set && (
                         <>
                           {" "}

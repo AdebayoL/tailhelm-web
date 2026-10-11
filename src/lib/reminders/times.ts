@@ -3,9 +3,10 @@ import { weekdayDayMonth } from "@/lib/app/dates";
 import { doseText } from "@/lib/plan/input";
 import type { Countdown, TestPlan } from "@/lib/today/today";
 import type { PlanSchedule } from "@/engine/schedule";
+import type { Jewel } from "@/lib/app/jewel";
 
 /** One line of Reminder times: "08:00 **Prednisolone** 2.5 mg", "Every day". */
-export type ReminderRow = { key: string; time: LocalTime; name: string; rest: string | null; sub: string };
+export type ReminderRow = { key: string; time: LocalTime; name: string; rest: string | null; sub: string; jewel: Jewel };
 
 type Item = { id: string; product: string | null; dose_amount: number | null; dose_unit: string | null; schedule_json: PlanSchedule };
 
@@ -29,6 +30,7 @@ export function reminderTimes(items: Item[], today: { date: LocalDate; countdown
             name: item.product ?? "Medicine",
             rest: doseText(item),
             sub: "Every day",
+            jewel: "pred" as const,
           }))
         : [],
     )
@@ -43,6 +45,7 @@ export function reminderTimes(items: Item[], today: { date: LocalDate; countdown
       name: c.item.product ?? "Injection",
       rest: c.dueOn ? when(c.dueOn, today.date) : null,
       sub: c.dueOn ? weekdayDayMonth(c.dueOn) : "Once the first injection is recorded",
+      jewel: "zyc",
       on: c.dueOn,
     });
   }
@@ -59,9 +62,10 @@ export function reminderTimes(items: Item[], today: { date: LocalDate; countdown
         : t.upcoming === null
           ? "Once an injection is recorded"
           : "None left before the next injection",
+      jewel: "meas",
       on: next?.dueOn ?? null,
     });
   }
   dated.sort((a, b) => (a.on ?? "9999").localeCompare(b.on ?? "9999") || (a.on ? a.time.localeCompare(b.time) : 0));
-  return [...daily, ...dated.map((r) => ({ key: r.key, time: r.time, name: r.name, rest: r.rest, sub: r.sub }))];
+  return [...daily, ...dated.map((r) => ({ key: r.key, time: r.time, name: r.name, rest: r.rest, sub: r.sub, jewel: r.jewel }))];
 }

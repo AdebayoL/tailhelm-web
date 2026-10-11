@@ -153,6 +153,7 @@ async function Reminders() {
   return (
     <Page
       title="Reminders"
+      band="overlap"
       sub={
         <>
           For {dog.name}&rsquo;s doses and injections<span className="d-only"> · checked {checked}</span>
@@ -189,7 +190,7 @@ async function Reminders() {
                   <span className="rec-time">{r.time}</span>
                   <div>
                     <p className="rec-med">
-                      <b>{r.name}</b>
+                      <b className={`m-${r.jewel}`}>{r.name}</b>
                       {r.rest && ` ${r.rest}`}
                     </p>
                     <p className="prov" style={{ marginTop: 4 }}>

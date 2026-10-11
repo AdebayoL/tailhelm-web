@@ -5,6 +5,7 @@ import { Icon } from "@/app/_components/icon";
 import { SheetLink } from "@/app/_components/sheet-link";
 import { addDays, toLocal } from "@/engine/time";
 import { dayMonth, longDate, weekdayDate, weekdayDayMonth } from "@/lib/app/dates";
+import { cycleView, jewelOf, tileLetters } from "@/lib/app/jewel";
 import { getShell } from "@/lib/app/shell";
 import { initial } from "@/lib/app/words";
 import { telHref } from "@/lib/dogs/input";
@@ -18,6 +19,7 @@ import { type Countdown, type DoseSlot, buildToday, nextActionText } from "@/lib
 import { cycleCells, firstDoseOn } from "@/lib/today/view";
 import { discardDate, vialRule, vialWarning, vialWarningText } from "@/lib/treatments/vial";
 import { getPack } from "@/packs/registry";
+import { CareRing } from "../../_components/care-ring";
 import { Page } from "../../_components/page";
 import { NoteForm } from "../trends/note-form";
 import { removeStressEvent, undoTick } from "./actions";
@@ -28,6 +30,7 @@ import { InjectionLog } from "./injection-log";
 import { OfflineDay } from "./offline-day";
 import { QuickCheck } from "./quick-check";
 import { StressEventForm } from "./stress-event-form";
+import { type InjectionStat, TodayStats } from "./today-stats";
 
 export const metadata: Metadata = { title: "Today · Tailhelm" };
 
@@ -85,9 +88,14 @@ async function TodayContent() {
     );
   }
   return (
-    <Page title={dog.name} sub={sub} aside={avatar} dog space={24}>
-      <TodayBoard data={{ ...data, plan }} shared={shell.shared} at={shell.at} myName={shell.me.name} today={today} />
-    </Page>
+    <TodayBoard
+      data={{ ...data, plan }}
+      shared={shell.shared}
+      at={shell.at}
+      myName={shell.me.name}
+      today={today}
+      conditionShort={short ?? null}
+    />
   );
 }
 
@@ -97,12 +105,14 @@ async function TodayBoard({
   at,
   myName,
   today,
+  conditionShort,
 }: {
   data: TodayData & { plan: NonNullable<TodayData["plan"]> };
   shared: string;
   at: string;
   myName: string;
   today: ReturnType<typeof buildToday>;
+  conditionShort: string | null;
 }) {
   const { dog, plan, input } = data;
   const pack = getPack(plan.condition.condition_key);
@@ -129,6 +139,8 @@ async function TodayBoard({
       heading: `${dog.name}’s ${line.name}`,
       line: line.rest,
       set: line.set,
+      jewel: jewelOf(item.schedule_json),
+      tile: tileLetters(line.name),
       ticks,
     };
   };
@@ -171,8 +183,80 @@ async function TodayBoard({
       />
     ));
 
+  // The injection cycle around the dog's initial, and the countdown in the desktop top bar.
+  const cycleItem = today.countdowns[0] ?? null;
+  const every = cycleItem?.item.schedule_json.kind === "interval" ? cycleItem.item.schedule_json.everyDays : null;
+  const product = cycleItem ? (cycleItem.item.product ?? "Injection") : null;
+  const cycle = cycleItem && every && product ? cycleView(product, cycleItem, every, dayMonth) : null;
+  const ring = (size: number, className: string, full: boolean) =>
+    cycle && every ? (
+      <CareRing
+        initial={initial(dog.name)}
+        day={cycle.day}
+        days={every}
+        overdue={cycle.overdue}
+        size={size}
+        label={full ? cycle.fullLabel : cycle.label}
+        className={className}
+      />
+    ) : (
+      <span className={`avatar ${className}`} aria-hidden="true">
+        {initial(dog.name)}
+      </span>
+    );
+  let injectionStat: InjectionStat | null = null;
+  if (cycleItem && cycle && every && product && cycleItem.dueOn !== null && cycleItem.daysUntil !== null) {
+    const { dueOn, daysUntil } = cycleItem;
+    injectionStat = cycle.overdue
+      ? {
+          label: `${product} injection`,
+          fig: "Overdue",
+          sub: `Due ${dayMonth(dueOn)} · ${-daysUntil} ${daysUntil === -1 ? "day" : "days"} ago`,
+          overdue: true,
+          part: 1,
+          days: every,
+        }
+      : {
+          label: `${product} injection`,
+          fig: daysUntil === 0 ? "Today" : `${daysUntil} ${daysUntil === 1 ? "day" : "days"}`,
+          sub: `Due ${weekdayDayMonth(dueOn)} · day ${cycle.day} of ${every}`,
+          overdue: false,
+          part: cycle.day / every,
+          days: every,
+        };
+  }
+  // Everyone on the list: "Adebayo and Sam", or "Adebayo, Sam and Kit".
+  const household = !shared ? myName : shared.includes(" and ") ? `${myName}, ${shared}` : `${myName} and ${shared}`;
+  const heroBand = Boolean(next || overdue);
+
   return (
-    <>
+    <Page
+      title={dog.name}
+      sub={
+        <>
+          {conditionShort ? `Tailhelm for ${conditionShort}` : "Today"}
+          <span className="d-only"> · {longDate(today.date)}</span>
+        </>
+      }
+      note={cycle && <span className="dog-cycle m-only">{cycle.line}</span>}
+      lead={<span className="d-only">{ring(88, "", true)}</span>}
+      aside={<span className="m-only">{ring(72, "", false)}</span>}
+      dog
+      space={24}
+      band={heroBand ? "hero" : undefined}
+      instrument={
+        <TodayStats
+          next={next}
+          tomorrow={!outstanding}
+          slots={today.doses.map((d) => d.slot)}
+          injection={injectionStat}
+          household={household}
+          at={at}
+          timeZone={input.timeZone}
+          serverNow={serverNow}
+        />
+      }
+    >
       <OfflineDay savedOn={today.date} timeZone={input.timeZone} doses={offlineDoses} shared={shared} />
 
       {overdue && (
@@ -315,7 +399,7 @@ async function TodayBoard({
 
         {(today.tests.length > 0 || lastResultOn) && (
           <section className="panel stack-12 o-4 f-3 blood-panel" aria-label="Blood tests">
-            <h2 className="ty-title">Blood tests</h2>
+            <h2 className="ty-title m-meas">Blood tests</h2>
             <dl className="dl blood-dl">
               <div>
                 <dt>Last</dt>
@@ -351,7 +435,7 @@ async function TodayBoard({
           </section>
         )}
       </div>
-    </>
+    </Page>
   );
 }
 
@@ -439,7 +523,14 @@ function InjectionCard({
   return (
     <section className="card lg stack-20 o-3 f-5 inj-card" aria-label="Next injection">
       <div className="kicker">
-        <span>Next injection</span>
+        <span className="kick-med">
+          {tileLetters(item.product ?? "") && (
+            <span className={`med ${jewelOf(item.schedule_json)}`} aria-hidden="true">
+              {tileLetters(item.product ?? "")}
+            </span>
+          )}
+          Next injection
+        </span>
         {dueOn && <span className="tn d-only">{weekdayDayMonth(dueOn)}</span>}
       </div>
       {dueOn !== null && daysUntil !== null ? (
@@ -465,13 +556,30 @@ function InjectionCard({
         <p className="ty-lead">The next date shows once the last injection is recorded.</p>
       )}
       {given && cycle && every && dueOn && (
-        <div className="stack-8 d-only">
+        <div className="stack-8">
           <div className="cycle" role="img" aria-label={`Day ${cycle.day} of a ${every}-day cycle`}>
             {cycle.cells.map((c, i) => (
               <span key={i} className={c} />
             ))}
           </div>
-          <div className="row between prov">
+          <div className="cycle-scale d-only" aria-hidden="true">
+            {[1, ...Array.from({ length: Math.floor(every / 7) }, (_, k) => 7 * (k + 1))]
+              .filter((d, i, all) => all.indexOf(d) === i && d <= every)
+              .concat(every % 7 ? [every] : [])
+              .map((d) => (
+                <span key={d} style={{ left: `${(((d - 0.5) / every) * 100).toFixed(2)}%` }}>
+                  {d}
+                </span>
+              ))}
+          </div>
+          <div className="row between prov m-only">
+            <span>{dayMonth(given.last.given_on)}, last given</span>
+            <span>
+              Day {cycle.day} of {every}
+            </span>
+            <span>{dayMonth(dueOn)}</span>
+          </div>
+          <div className="row between prov d-only">
             <span>{given.text.replace(" by ", " · last given by ")}</span>
             <span>{dayMonth(dueOn)} · due</span>
           </div>

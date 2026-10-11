@@ -2,6 +2,7 @@
 
 import { Icon } from "@/app/_components/icon";
 import { Sheet } from "@/app/_components/sheet";
+import type { Jewel } from "@/lib/app/jewel";
 import { telHref } from "@/lib/dogs/input";
 
 export type Vet = { name: string | null; phone: string | null };
@@ -33,7 +34,7 @@ export function GuardSheet({
   by: string;
   at: string;
   slot: string;
-  med: { name: string; amount: string | null };
+  med: { name: string; amount: string | null; jewel?: Jewel };
   dogName: string;
   vet: Vet;
   onClose: () => void;
@@ -52,7 +53,7 @@ export function GuardSheet({
           <span className="rec-time">{slot}</span>
           <div>
             <p className="rec-med">
-              <b>{med.name}</b>
+              <b className={med.jewel ? `m-${med.jewel}` : undefined}>{med.name}</b>
               {med.amount && ` ${med.amount}`}
             </p>
             <p className="st given">

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Icon } from "@/app/_components/icon";
 import { toLocal } from "@/engine/time";
+import type { Jewel } from "@/lib/app/jewel";
 import { untilText } from "@/lib/app/words";
 import { removeQueuedTick } from "@/lib/offline/queue";
 import { LATE_AFTER_MS, type TickView } from "@/lib/today/today";
@@ -26,8 +27,26 @@ export type DoseView = {
   line: string;
   /** "(set by vet 12 Sep 2026)" */
   set: string | null;
+  /** What the medicine is, as the design colours it. */
+  jewel: Jewel;
+  /** "Pr", on the medicine's tile. */
+  tile: string;
   ticks: TickView[];
 };
+
+/** "Next dose" with the medicine's tile beside it. */
+function NextDoseLabel({ dose }: { dose: DoseView }) {
+  return (
+    <span className="kick-med">
+      {dose.tile && (
+        <span className={`med ${dose.jewel}`} aria-hidden="true">
+          {dose.tile}
+        </span>
+      )}
+      Next dose
+    </span>
+  );
+}
 
 /** "This phone" or "this computer", whichever the person is holding. */
 export function ThisDevice({ capital = false }: { capital?: boolean }) {
@@ -142,7 +161,7 @@ export function DoseCard({
   let cls = "card lg dose-card";
   let kicker = (
     <div className="kicker">
-      <span>Next dose</span>
+      <NextDoseLabel dose={shown} />
       <span className="tn">{kickerRight}</span>
     </div>
   );
@@ -169,7 +188,7 @@ export function DoseCard({
     label = "Dose saved on this phone";
     kicker = (
       <div className="kicker">
-        <span>Next dose</span>
+        <NextDoseLabel dose={shown} />
         <span className="chip chip-dashed">
           <Icon name="thisPhone" className="m-only" />
           <Icon name="thisComputer" className="d-only" />
@@ -240,7 +259,7 @@ export function DoseCard({
           by={state.alreadyGiven.by}
           at={state.alreadyGiven.at}
           slot={shown.slot}
-          med={{ name: shown.med, amount: shown.amount }}
+          med={{ name: shown.med, amount: shown.amount, jewel: shown.jewel }}
           dogName={dogName}
           vet={vet}
           onClose={() => setGuardOpen(null)}

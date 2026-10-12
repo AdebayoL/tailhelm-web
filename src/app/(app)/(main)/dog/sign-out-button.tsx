@@ -4,9 +4,12 @@ import { useState } from "react";
 import { clearOfflinePages } from "@/lib/offline/client";
 import { clearQueue, queuedTicks } from "@/lib/offline/queue";
 import { signOut } from "@/app/sign-in/actions";
+import { unsubscribePhone } from "@/lib/push/client";
+import { forgetPhone } from "../reminders/actions";
 
 /**
- * Signs out after deleting everything kept on this phone for offline use. If
+ * Signs out after deleting everything kept on this phone for offline use and
+ * stopping its notifications, so the next person on it gets none of them. If
  * ticks made with no signal are still waiting, says so first, because signing
  * out deletes them and the household would never see them.
  */
@@ -16,6 +19,8 @@ export function SignOutButton() {
   async function leave() {
     await clearQueue();
     await clearOfflinePages();
+    const endpoint = await unsubscribePhone();
+    if (endpoint) await forgetPhone(endpoint).catch(() => {});
     await signOut();
   }
 

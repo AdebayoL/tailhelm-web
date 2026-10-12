@@ -14,6 +14,8 @@ import { Page } from "../../_components/page";
 import { stopCalendarLink } from "./actions";
 import { AddCalendar, CopyCalendarLink } from "./calendar-link";
 import { HomeScreenCheck } from "./home-screen";
+import { PhoneNotifications } from "./notifications";
+import { vapidPublicKey } from "@/lib/push/config";
 
 export const metadata: Metadata = { title: "Reminders · Tailhelm" };
 
@@ -49,11 +51,17 @@ async function Reminders() {
   const { dog, input } = data;
   const today = buildToday(input);
   const supabase = await createClient();
-  const { data: feedRows } = await supabase
-    .from("calendar_feeds")
-    .select("app, created_at, created_by, last_fetched_at")
-    .eq("dog_id", dog.id)
-    .is("revoked_at", null);
+  const publicKey = vapidPublicKey();
+  const [{ data: feedRows }, { data: lastSentRow }] = await Promise.all([
+    supabase.from("calendar_feeds").select("app, created_at, created_by, last_fetched_at").eq("dog_id", dog.id).is("revoked_at", null),
+    supabase
+      .from("notifications")
+      .select("sent_at")
+      .eq("status", "sent")
+      .order("sent_at", { ascending: false })
+      .limit(1)
+      .maybeSingle<{ sent_at: string }>(),
+  ]);
   const feeds = (feedRows ?? []) as Feed[];
   const feed = (app: Feed["app"]) => feeds.find((f) => f.app === app);
   const local = (at: string) => toLocal(new Date(at), input.timeZone);
@@ -98,6 +106,7 @@ async function Reminders() {
         <span className="prov d-only">Checked {shell.at}</span>
       </li>
       <HomeScreenCheck checkedAt={shell.at} />
+      {publicKey && <PhoneNotifications publicKey={publicKey} checkedAt={shell.at} lastSent={lastSentRow ? atText(lastSentRow.sent_at) : null} />}
       {soundTimes.length > 0 && (
         <li className="health-row">
           <Icon name="info" className="c2" />

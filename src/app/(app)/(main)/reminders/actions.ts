@@ -5,6 +5,9 @@ import { headers } from "next/headers";
 import { requireOwner } from "@/lib/auth/session";
 import { newToken, sha256Hex } from "@/lib/calendar/links";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { pushConfig } from "@/lib/push/config";
+import { type Outcome, deliver } from "@/lib/push/send";
 
 export type LinkState = { url?: string; failed?: boolean };
 
@@ -46,4 +49,56 @@ export async function stopCalendarLink(form: FormData): Promise<void> {
   });
   if (error) console.error("[calendar] stop failed", { code: error.code, message: error.message });
   refresh();
+}
+
+export type PhoneParts = { endpoint: string; p256dh: string; auth: string };
+
+/** Saves this phone so the signed-in person's reminders reach it. */
+export async function savePhone(parts: PhoneParts, userAgent: string): Promise<{ ok: boolean }> {
+  await requireOwner();
+  if (!/^https:\/\//.test(parts.endpoint) || !parts.p256dh || !parts.auth) return { ok: false };
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("save_push_subscription", {
+    endpoint: parts.endpoint,
+    p256dh: parts.p256dh,
+    auth: parts.auth,
+    user_agent: userAgent.slice(0, 300),
+  });
+  if (error) console.error("[push] save failed", { code: error.code, message: error.message });
+  return { ok: !error };
+}
+
+/** Forgets this phone, so nothing more is sent to it. */
+export async function forgetPhone(endpoint: string): Promise<void> {
+  await requireOwner();
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("forget_push_subscription", { endpoint });
+  if (error) console.error("[push] forget failed", { code: error.code, message: error.message });
+}
+
+export type TestState = { outcome?: Outcome | "not_set_up" };
+
+/** Sends a test notification to every phone of the person signed in. */
+export async function sendTestNotification(): Promise<TestState> {
+  const owner = await requireOwner();
+  const admin = createAdminClient();
+  const config = pushConfig();
+  if (!admin || !config) return { outcome: "not_set_up" };
+  const now = new Date();
+  try {
+    const outcome = await deliver(admin, config, owner.userId, null, {
+      kind: "test",
+      ref: now.toISOString(),
+      tag: "test",
+      title: "Tailhelm test",
+      body: "Reminders reach this phone.",
+      url: "/reminders",
+      at: now,
+    });
+    refresh();
+    return { outcome };
+  } catch (error) {
+    console.error("[push] test failed", { message: (error as Error).message });
+    return { outcome: "failed" };
+  }
 }

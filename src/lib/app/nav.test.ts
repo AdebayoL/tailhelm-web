@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { isProtectedPath } from "@/lib/auth/input";
-import { EMERGENCY_PATH, MORE, TABS, sideItemFor, tabFor } from "./nav";
+import { EMERGENCY_PATH, MORE, TABS, dogTabLabel, sideItemFor, tabFor } from "./nav";
 
 const BANNED = ["safe", "normal", "fine", "streak", "compliance", "administer", "dosage"];
 
@@ -33,5 +33,12 @@ describe("navigation", () => {
   it("uses none of the banned words", () => {
     const text = [...TABS.flatMap((t) => [t.label, t.question]), ...MORE.map((m) => m.label)].join(" ").toLowerCase();
     for (const word of BANNED) expect(text).not.toMatch(new RegExp(`\\b${word}\\b`));
+  });
+
+  it("calls the Dog tab by the dog's name when there is one dog, and Dogs when there are several", () => {
+    expect(dogTabLabel([])).toBe("Dog");
+    expect(dogTabLabel(["Buster"])).toBe("Buster");
+    expect(dogTabLabel([" Buster "])).toBe("Buster");
+    expect(dogTabLabel(["Buster", "Bella"])).toBe("Dogs");
   });
 });

@@ -36,3 +36,11 @@ export const getMyDog = cache(async (): Promise<Dog | null> => {
   if (error) throw new Error(`Could not load the dog: ${error.message}`);
   return data && { ...data, vet_hours: readHours(data.vet_hours), out_of_hours_hours: readHours(data.out_of_hours_hours) };
 });
+
+/** The names of every active dog the signed-in person shares, oldest first. */
+export const getMyDogNames = cache(async (): Promise<string[]> => {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("dogs").select("name").eq("status", "active").order("created_at");
+  if (error) throw new Error(`Could not load the dogs: ${error.message}`);
+  return ((data ?? []) as { name: string }[]).map((d) => d.name);
+});

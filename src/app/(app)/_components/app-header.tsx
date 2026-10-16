@@ -11,11 +11,11 @@ import { EmergencyButton } from "./emergency-button";
  * right, in the same place on every screen. The Dog tab's own screens lead
  * with a way back to Dog, and Past days with a way back to Today; the vet visit, handed to a vet, keeps only the name.
  */
-export function AppHeader() {
+export function AppHeader({ dogLabel = "Dog" }: { dogLabel?: string }) {
   const pathname = usePathname();
   const back =
     pathname === "/reminders" || pathname === "/vet-visit"
-      ? { href: "/dog", label: "Dog" }
+      ? { href: "/dog", label: dogLabel }
       : pathname === "/today/past"
         ? { href: "/today", label: "Today" }
         : null;

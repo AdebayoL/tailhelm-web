@@ -2,15 +2,18 @@ import "server-only";
 import { cache } from "react";
 import { toLocal } from "@/engine/time";
 import { requireOwner } from "@/lib/auth/session";
-import { getMyDog } from "@/lib/dogs/queries";
+import { getMyDog, getMyDogNames } from "@/lib/dogs/queries";
 import { getHousehold, getMyName } from "@/lib/household/queries";
 import { getDogPlan } from "@/lib/plan/queries";
 import { getTimeZone, householdNames } from "@/lib/today/queries";
 import { conditionName, conditionShortName } from "@/packs/names";
+import { dogTabLabel } from "./nav";
 import { joinNames, otherNames } from "./words";
 
 export type Shell = {
   dog: { name: string; condition: string | null; conditionShort: string | null } | null;
+  /** The Dog tab's label: the dog's name, "Dogs" for several, or "Dog". */
+  dogTab: string;
   me: { name: string; role: "Owner" | "Member" };
   /** The other people in the household, as "Sam" or "Sam and Kit"; empty when there are none. */
   shared: string;
@@ -22,7 +25,7 @@ export type Shell = {
 /** What the frame around every signed-in screen shows: the dog, who is signed in, and how current the page is. */
 export const getShell = cache(async (): Promise<Shell> => {
   const owner = await requireOwner();
-  const [dog, myName, timeZone] = await Promise.all([getMyDog(), getMyName(owner.userId), getTimeZone(owner.userId)]);
+  const [dog, dogNames, myName, timeZone] = await Promise.all([getMyDog(), getMyDogNames(), getMyName(owner.userId), getTimeZone(owner.userId)]);
   const [plan, names, members] = dog
     ? await Promise.all([getDogPlan(dog.id), householdNames(dog.id), getHousehold(dog.id)])
     : [null, {} as Record<string, string>, []];
@@ -37,6 +40,7 @@ export const getShell = cache(async (): Promise<Shell> => {
       condition: key && conditionName(key),
       conditionShort: key && conditionShortName(key),
     },
+    dogTab: dogTabLabel(dogNames),
     me: {
       name: myName ?? owner.email?.split("@")[0] ?? "You",
       role: members.find((m) => m.profile_id === owner.userId)?.role === "member" ? "Member" : "Owner",

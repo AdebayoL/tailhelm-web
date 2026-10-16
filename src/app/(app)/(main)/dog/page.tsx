@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Suspense } from "react";
 import { Icon } from "@/app/_components/icon";
 import { SheetClose, SheetLink } from "@/app/_components/sheet-link";
 import { addDays, toLocal } from "@/engine/time";
 import { dayMonth, monthYear, weekdayDate } from "@/lib/app/dates";
 import { jewelClass } from "@/lib/app/jewel";
+import { MORE } from "@/lib/app/nav";
 import { initial } from "@/lib/app/words";
 import { requireOwner } from "@/lib/auth/session";
 import { hoursLines } from "@/lib/dogs/hours";
@@ -84,6 +86,20 @@ async function DogContent() {
       space={16}
       band="overlap"
     >
+      {/* On a phone the Dog tab is the way to its other screens; a desktop lists them in the sidebar. */}
+      <nav className="card m-only" aria-label="More for your dog" style={{ padding: "4px 20px" }}>
+        <ul>
+          {MORE.map((m, i) => (
+            <li key={m.href} style={i > 0 ? { borderTop: "1px solid var(--line)" } : undefined}>
+              <Link href={m.href} className="lnk" style={{ width: "100%", textDecoration: "none", gap: 12 }}>
+                <Icon name={m.icon} />
+                <span style={{ flex: 1 }}>{m.label}</span>
+                <span aria-hidden="true">›</span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </nav>
       <div className="d-row">
         <section className="card lg stack-16" aria-label="Profile" style={{ flex: "5 1 380px" }}>
           <div className="kicker">

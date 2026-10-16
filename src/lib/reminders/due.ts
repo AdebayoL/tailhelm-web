@@ -14,8 +14,23 @@ import { LATE_AFTER_MS, type Today, type TodayItem } from "@/lib/today/today";
 export const CATCH_UP_MS = 60 * 60 * 1000;
 /** Days before an injection that the household is reminded (spec: 7 and 2). */
 export const INJECTION_NOTICE_DAYS = [7, 2] as const;
+/** A dose still not ticked by this time on the owner's clock gets one more email (spec: 21:00). */
+export const EVENING: LocalTime = "21:00";
 
-export type NoticeKind = "test" | "dose_due" | "dose_not_ticked" | "dose_ticked" | "injection_soon" | "injection_overdue" | "test_due";
+export type NoticeKind =
+  | "test"
+  | "dose_due"
+  | "dose_not_ticked"
+  | "dose_evening"
+  | "dose_ticked"
+  | "injection_soon"
+  | "injection_overdue"
+  | "test_due";
+
+/** What reaches a phone. The 21:00 message is email only, because the 2-hour notification already reached the phone. */
+export const PUSH_KINDS: ReadonlySet<NoticeKind> = new Set(["test", "dose_due", "dose_not_ticked", "dose_ticked", "injection_soon", "injection_overdue", "test_due"]);
+/** What is also emailed, as a net under the phone (spec: reminder layer 3). */
+export const EMAIL_KINDS: ReadonlySet<NoticeKind> = new Set(["dose_not_ticked", "dose_evening", "injection_soon", "injection_overdue"]);
 
 export type Notice = {
   kind: NoticeKind;
@@ -56,6 +71,19 @@ export function dueNotices(today: Today, dogName: string, timeZone: string, now:
       url: "/today",
       at: new Date(dose.dueAt.getTime() + LATE_AFTER_MS),
     });
+    // Only a dose whose 2-hour reminder has already gone gets the evening one.
+    const evening = zonedTimeToInstant(today.date, EVENING, timeZone);
+    if (dose.dueAt.getTime() + LATE_AFTER_MS <= evening.getTime()) {
+      add({
+        kind: "dose_evening",
+        ref,
+        tag,
+        title: `${what} still isn’t ticked today`,
+        body: `It was due at ${dose.slot}. If it was missed, contact your vet.`,
+        url: "/today",
+        at: evening,
+      });
+    }
   }
 
   for (const c of today.countdowns) {

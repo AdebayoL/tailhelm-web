@@ -1,32 +1,33 @@
 import "server-only";
+import { emailConfig, deliverEmail } from "@/lib/email/send";
+import type { Outcome } from "@/lib/notify/log";
 import { addDays } from "@/engine/time";
 import { PlanSchedule } from "@/engine/schedule";
 import { pushConfig } from "@/lib/push/config";
-import { type Outcome, deliver } from "@/lib/push/send";
+import { deliver } from "@/lib/push/send";
 import type { AdminClient } from "@/lib/supabase/admin";
 import { type Tick, type TodayItem, buildToday } from "@/lib/today/today";
-import { dueNotices } from "./due";
+import { EMAIL_KINDS, PUSH_KINDS, type Notice, dueNotices } from "./due";
 
-export type RunSummary = { dogs: number; notices: number } & Partial<Record<Outcome, number>>;
+type Counts = Partial<Record<Outcome, number>>;
+export type RunSummary = { dogs: number; notices: number; push: Counts; email: Counts };
 
 type Member = { dog_id: string; profile_id: string; role: string };
+type Person = { id: string; email: string | null; timezone: string; email_reminders: boolean };
 type Item = { id: string; product: string | null; schedule_json: unknown; dog_condition_id: string };
 
 /**
- * One scheduler run: for every active dog with someone whose phone takes
- * notifications, work out what is due now on the owner's clock and send it
- * to each person in the household. Safe to run as often as wanted, because
- * each reminder is logged and sent once per person.
+ * One scheduler run: for every active dog with someone a reminder can reach,
+ * work out what is due now on the owner's clock and send it to each person in
+ * the household, by notification on their phones and, for the reminders the
+ * spec emails, by email. Safe to run as often as wanted, because each
+ * reminder is logged and sent once per person per channel.
  */
-export async function runReminders(admin: AdminClient, now: Date): Promise<RunSummary> {
-  const config = pushConfig();
-  if (!config) throw new Error("Set NEXT_PUBLIC_VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY");
-
-  const { data: subs, error: subsError } = await admin.from("push_subscriptions").select("profile_id");
-  if (subsError) throw new Error(`Could not load phones: ${subsError.message}`);
-  const reachable = new Set((subs ?? []).map((s: { profile_id: string }) => s.profile_id));
-  const summary: RunSummary = { dogs: 0, notices: 0 };
-  if (reachable.size === 0) return summary;
+export async function runReminders(admin: AdminClient, now: Date, appUrl: string): Promise<RunSummary> {
+  const push = pushConfig();
+  const email = emailConfig();
+  if (!push && !email) throw new Error("Set the VAPID keys or RESEND_API_KEY");
+  const summary: RunSummary = { dogs: 0, notices: 0, push: {}, email: {} };
 
   const { data: memberRows, error: membersError } = await admin
     .from("household_members")
@@ -35,18 +36,50 @@ export async function runReminders(admin: AdminClient, now: Date): Promise<RunSu
     .eq("dogs.status", "active");
   if (membersError) throw new Error(`Could not load households: ${membersError.message}`);
   const members = (memberRows ?? []) as Member[];
-  const dogIds = [...new Set(members.filter((m) => reachable.has(m.profile_id)).map((m) => m.dog_id))];
+  const profileIds = [...new Set(members.map((m) => m.profile_id))];
+  if (profileIds.length === 0) return summary;
+
+  const [subs, people] = await Promise.all([
+    push ? admin.from("push_subscriptions").select("profile_id").in("profile_id", profileIds) : Promise.resolve({ data: [], error: null }),
+    admin.from("profiles").select("id, email, timezone, email_reminders").in("id", profileIds),
+  ]);
+  if (subs.error ?? people.error) throw new Error(`Could not load people: ${(subs.error ?? people.error)!.message}`);
+  const personOf = new Map(((people.data ?? []) as Person[]).map((p) => [p.id, p]));
+  const pushable = new Set(((subs.data ?? []) as { profile_id: string }[]).map((s) => s.profile_id));
+  const emailable = new Set(
+    email ? [...personOf.values()].filter((p) => p.email_reminders && p.email?.includes("@")).map((p) => p.id) : [],
+  );
+  const reachable = (id: string) => pushable.has(id) || emailable.has(id);
+  const dogIds = [...new Set(members.filter((m) => reachable(m.profile_id)).map((m) => m.dog_id))];
   if (dogIds.length === 0) return summary;
 
   const owners = members.filter((m) => m.role === "owner" && dogIds.includes(m.dog_id));
-  const [dogs, zones, conditions] = await Promise.all([
+  const [dogs, conditions] = await Promise.all([
     admin.from("dogs").select("id, name").in("id", dogIds),
-    admin.from("profiles").select("id, timezone").in("id", owners.map((o) => o.profile_id)),
     admin.from("dog_conditions").select("id, dog_id").in("dog_id", dogIds),
   ]);
-  const failed = dogs.error ?? zones.error ?? conditions.error;
+  const failed = dogs.error ?? conditions.error;
   if (failed) throw new Error(`Could not load dogs: ${failed.message}`);
   const conditionIds = ((conditions.data ?? []) as { id: string; dog_id: string }[]).map((c) => c.id);
+
+  const send = async (person: string, dogId: string, notice: Notice) => {
+    const sends: ["push" | "email", () => Promise<Outcome>][] = [];
+    if (push && PUSH_KINDS.has(notice.kind) && pushable.has(person)) sends.push(["push", () => deliver(admin, push, person, dogId, notice)]);
+    const address = personOf.get(person)?.email;
+    if (email && address && EMAIL_KINDS.has(notice.kind) && emailable.has(person)) {
+      sends.push(["email", () => deliverEmail(admin, email, { id: person, email: address }, dogId, notice, appUrl)]);
+    }
+    for (const [channel, go] of sends) {
+      let outcome: Outcome;
+      try {
+        outcome = await go();
+      } catch (error) {
+        console.error("[reminders] send failed", { channel, kind: notice.kind, message: (error as Error).message });
+        outcome = "failed";
+      }
+      summary[channel][outcome] = (summary[channel][outcome] ?? 0) + 1;
+    }
+  };
 
   const utcToday = now.toISOString().slice(0, 10);
   const [items, anchors] = await Promise.all([
@@ -65,11 +98,10 @@ export async function runReminders(admin: AdminClient, now: Date): Promise<RunSu
     : { data: [], error: null };
   if (ticks.error) throw new Error(`Could not load ticks: ${ticks.error.message}`);
 
-  const zoneOf = new Map(((zones.data ?? []) as { id: string; timezone: string }[]).map((z) => [z.id, z.timezone]));
   for (const dog of (dogs.data ?? []) as { id: string; name: string }[]) {
     const owner = owners.find((o) => o.dog_id === dog.id);
-    const timeZone = (owner && zoneOf.get(owner.profile_id)) || "Europe/London";
-    const people = members.filter((m) => m.dog_id === dog.id && reachable.has(m.profile_id)).map((m) => m.profile_id);
+    const timeZone = (owner && personOf.get(owner.profile_id)?.timezone) || "Europe/London";
+    const people = members.filter((m) => m.dog_id === dog.id && reachable(m.profile_id)).map((m) => m.profile_id);
     summary.dogs++;
     for (const condition of ((conditions.data ?? []) as { id: string; dog_id: string }[]).filter((c) => c.dog_id === dog.id)) {
       const planItems: TodayItem[] = ((items.data ?? []) as Item[])
@@ -93,15 +125,7 @@ export async function runReminders(admin: AdminClient, now: Date): Promise<RunSu
       });
       for (const notice of dueNotices(today, dog.name, timeZone, now)) {
         summary.notices++;
-        for (const person of people) {
-          try {
-            const outcome = await deliver(admin, config, person, dog.id, notice);
-            summary[outcome] = (summary[outcome] ?? 0) + 1;
-          } catch (error) {
-            console.error("[reminders] send failed", { kind: notice.kind, message: (error as Error).message });
-            summary.failed = (summary.failed ?? 0) + 1;
-          }
-        }
+        for (const person of people) await send(person, dog.id, notice);
       }
     }
   }

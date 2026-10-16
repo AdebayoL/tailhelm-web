@@ -81,3 +81,27 @@ select pg_temp.expect_error($$insert into public.notifications (profile_id, kind
 select pg_temp.act_as(:bob);
 select pg_temp.expect((select count(*)::text from public.notifications), '0', 'Bob cannot see Alice''s log');
 reset role;
+
+-- Email reminders: the same reminder by email is logged separately from the
+-- phone notification, and still only once.
+set role service_role;
+insert into public.notifications (profile_id, kind, ref, channel, title, scheduled_for)
+  values (:alice, 'dose_due', 'item:2026-10-13:08:00', 'email', 'Time for Bella''s Prednisolone', now());
+insert into public.notifications (profile_id, kind, ref, channel, title, scheduled_for)
+  values (:alice, 'dose_evening', 'item:2026-10-13:08:00', 'email', 'Bella''s Prednisolone still isn''t ticked today', now());
+select pg_temp.expect_error($$insert into public.notifications (profile_id, kind, ref, channel, title, scheduled_for)
+  values ('a0000000-0000-0000-0000-000000000001', 'dose_evening', 'item:2026-10-13:08:00', 'email', 'again', now())$$, 'the same email is never logged twice');
+select pg_temp.expect_error($$insert into public.notifications (profile_id, kind, ref, channel, title, scheduled_for)
+  values ('a0000000-0000-0000-0000-000000000001', 'test', 'y', 'sms', 'x', now())$$, 'only push and email are channels');
+reset role;
+
+-- Each person can turn their own reminder emails off, and nobody else's.
+set role authenticated;
+select pg_temp.act_as(:alice);
+select pg_temp.expect((select email_reminders::text from public.profiles where id = :alice), 'true', 'reminder emails are on by default');
+update public.profiles set email_reminders = false where id = :alice;
+select pg_temp.expect((select email_reminders::text from public.profiles where id = :alice), 'false', 'Alice turns her reminder emails off');
+select pg_temp.act_as(:bob);
+update public.profiles set email_reminders = false where id = :alice;
+reset role;
+select pg_temp.expect((select count(*)::text from public.profiles where email_reminders = false), '1', 'Bob cannot change Alice''s setting');

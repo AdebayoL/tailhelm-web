@@ -1,23 +1,19 @@
 import "server-only";
 import { createHash } from "node:crypto";
 import webpush from "web-push";
+import { type Outcome, logOnce, logResult } from "@/lib/notify/log";
 import type { Notice } from "@/lib/reminders/due";
 import type { AdminClient } from "@/lib/supabase/admin";
 import { type PushConfig, isGone } from "./config";
 
-const UNIQUE_VIOLATION = "23505";
 /** How long a push service holds a notification for a phone that is off. */
 const TTL_SECONDS = 4 * 60 * 60;
 
-export type Outcome = "sent" | "no_device" | "failed" | "already_sent";
+export type { Outcome };
 
 type Subscription = { id: string; endpoint: string; p256dh: string; auth: string };
 
-/**
- * Sends one notice to one person's phones, once. The delivery log row is
- * written first, and its unique key means a second run, or two runs at the
- * same moment, cannot send the same reminder to the same person again.
- */
+/** Sends one notice to one person's phones, once (see logOnce). */
 export async function deliver(
   admin: AdminClient,
   config: PushConfig,
@@ -25,20 +21,8 @@ export async function deliver(
   dogId: string | null,
   notice: Notice,
 ): Promise<Outcome> {
-  const { data: logged, error: logError } = await admin
-    .from("notifications")
-    .insert({
-      profile_id: profileId,
-      dog_id: dogId,
-      kind: notice.kind,
-      ref: notice.ref,
-      title: notice.title,
-      scheduled_for: notice.at.toISOString(),
-    })
-    .select("id")
-    .single<{ id: string }>();
-  if (logError?.code === UNIQUE_VIOLATION) return "already_sent";
-  if (logError || !logged) throw new Error(`Could not log a notification: ${logError?.message}`);
+  const logged = await logOnce(admin, profileId, dogId, notice, "push");
+  if (!logged) return "already_sent";
 
   const { data: subs, error: subsError } = await admin
     .from("push_subscriptions")
@@ -70,11 +54,8 @@ export async function deliver(
     }
   }
 
-  const status: Outcome = sent > 0 ? "sent" : (subs ?? []).length === 0 || problems.every((p) => p.startsWith("phone gone")) ? "no_device" : "failed";
-  await admin
-    .from("notifications")
-    .update({ status, sent_at: sent > 0 ? new Date().toISOString() : null, detail: problems.length ? problems.join("; ") : null })
-    .eq("id", logged.id);
+  const status = sent > 0 ? "sent" : (subs ?? []).length === 0 || problems.every((p) => p.startsWith("phone gone")) ? "no_device" : "failed";
+  await logResult(admin, logged, status, problems);
   return status;
 }
 

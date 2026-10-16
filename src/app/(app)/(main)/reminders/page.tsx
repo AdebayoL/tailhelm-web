@@ -11,7 +11,9 @@ import { createClient } from "@/lib/supabase/server";
 import { getTodayData } from "@/lib/today/queries";
 import { buildToday } from "@/lib/today/today";
 import { Page } from "../../_components/page";
-import { stopCalendarLink } from "./actions";
+import { requireOwner } from "@/lib/auth/session";
+import { emailConfig } from "@/lib/email/send";
+import { setEmailReminders, stopCalendarLink } from "./actions";
 import { AddCalendar, CopyCalendarLink } from "./calendar-link";
 import { HomeScreenCheck } from "./home-screen";
 import { PhoneNotifications } from "./notifications";
@@ -52,16 +54,29 @@ async function Reminders() {
   const today = buildToday(input);
   const supabase = await createClient();
   const publicKey = vapidPublicKey();
-  const [{ data: feedRows }, { data: lastSentRow }] = await Promise.all([
+  const emailReady = !!emailConfig();
+  const owner = await requireOwner();
+  const [{ data: feedRows }, { data: lastSentRow }, { data: me }, { data: lastEmailRow }] = await Promise.all([
     supabase.from("calendar_feeds").select("app, created_at, created_by, last_fetched_at").eq("dog_id", dog.id).is("revoked_at", null),
     supabase
       .from("notifications")
       .select("sent_at")
       .eq("status", "sent")
+      .eq("channel", "push")
+      .order("sent_at", { ascending: false })
+      .limit(1)
+      .maybeSingle<{ sent_at: string }>(),
+    supabase.from("profiles").select("email, email_reminders").eq("id", owner.userId).maybeSingle<{ email: string; email_reminders: boolean }>(),
+    supabase
+      .from("notifications")
+      .select("sent_at")
+      .eq("status", "sent")
+      .eq("channel", "email")
       .order("sent_at", { ascending: false })
       .limit(1)
       .maybeSingle<{ sent_at: string }>(),
   ]);
+  const emailOn = me?.email_reminders ?? true;
   const feeds = (feedRows ?? []) as Feed[];
   const feed = (app: Feed["app"]) => feeds.find((f) => f.app === app);
   const local = (at: string) => toLocal(new Date(at), input.timeZone);
@@ -107,6 +122,34 @@ async function Reminders() {
       </li>
       <HomeScreenCheck checkedAt={shell.at} />
       {publicKey && <PhoneNotifications publicKey={publicKey} checkedAt={shell.at} lastSent={lastSentRow ? atText(lastSentRow.sent_at) : null} />}
+      {emailReady && me && (
+        <li className="health-row">
+          {emailOn ? (
+            <span className="health-ok">
+              <Icon name="tick" />
+            </span>
+          ) : (
+            <span className="health-warn">
+              <Icon name="attention" />
+            </span>
+          )}
+          <div className="stack-4">
+            <p className={emailOn ? undefined : "w6"}>{emailOn ? "Email reminders are on" : "Email reminders are off"}</p>
+            <p className={emailOn ? "prov" : "ty-sm"}>
+              {emailOn
+                ? `To ${me.email}, if a dose isn’t ticked 2 hours after its time and again at 21:00, and before each injection.${lastEmailRow ? ` Last sent at ${atText(lastEmailRow.sent_at)}.` : ""}`
+                : "Turn them on as a backup, in case a phone notification doesn’t arrive."}
+            </p>
+            <form action={setEmailReminders}>
+              <input type="hidden" name="on" value={emailOn ? "off" : "on"} />
+              <button className={emailOn ? "lnk ty-sm" : "btn btn-secondary"} type="submit" style={emailOn ? { minHeight: 0 } : { width: "auto" }}>
+                {emailOn ? "Turn off email reminders" : "Turn on email reminders"}
+              </button>
+            </form>
+          </div>
+          <span className="prov d-only">Checked {shell.at}</span>
+        </li>
+      )}
       {soundTimes.length > 0 && (
         <li className="health-row">
           <Icon name="info" className="c2" />

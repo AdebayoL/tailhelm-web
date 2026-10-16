@@ -29,7 +29,9 @@ async function run(request: Request) {
   }
   const started = Date.now();
   try {
-    const summary = await runReminders(admin, new Date());
+    // Links in reminder emails point back at the address the scheduler calls, unless APP_URL says otherwise.
+    const appUrl = process.env.APP_URL?.trim() || new URL(request.url).origin;
+    const summary = await runReminders(admin, new Date(), appUrl);
     console.info("[reminders] run", { ...summary, ms: Date.now() - started });
     return Response.json({ ok: true, ...summary });
   } catch (error) {

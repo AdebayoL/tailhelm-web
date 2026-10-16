@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { type Tick, type TodayInput, buildToday } from "@/lib/today/today";
-import { CATCH_UP_MS, dueNotices, tickedNotice } from "./due";
+import { CATCH_UP_MS, EMAIL_KINDS, PUSH_KINDS, dueNotices, tickedNotice } from "./due";
 
 const BANNED = /\b(safe|normal|fine|streak|compliance|administer|dosage|good|bad)\b/i;
 const DOSE = /\d\s*(mg|ml|mcg|µg|tablet)/i;
@@ -60,6 +60,27 @@ describe("dueNotices", () => {
     expect(notices("2026-10-13T09:05:00Z", { ticks: [tick()] })).toEqual([]);
   });
 
+  it("sends one more message at 21:00 for a dose still not ticked, with contact your vet", () => {
+    const evening = notices("2026-10-13T20:00:00Z"); // 21:00 BST
+    expect(evening.map((n) => [n.kind, n.ref, n.title, n.body])).toEqual([
+      ["dose_evening", "pred:2026-10-13:08:00", "Bella’s Prednisolone still isn’t ticked today", "It was due at 08:00. If it was missed, contact your vet."],
+    ]);
+    expect(notices("2026-10-13T19:59:00Z").map((n) => n.kind)).toEqual(["dose_due"]); // the 20:00 dose, not yet the evening message
+    expect(notices("2026-10-13T20:00:00Z", { ticks: [tick()] })).toEqual([]);
+  });
+
+  it("skips the 21:00 message for a dose whose 2-hour reminder is not due until after it", () => {
+    const late = { ...pred, schedule_json: { kind: "fixed" as const, times: ["20:00"] } };
+    expect(notices("2026-10-13T20:00:00Z", { items: [late] }).map((n) => n.kind)).toEqual([]);
+    expect(notices("2026-10-13T21:00:00Z", { items: [late] }).map((n) => n.kind)).toEqual(["dose_not_ticked"]);
+  });
+
+  it("emails the 2-hour, 21:00 and injection reminders, and sends the 21:00 one by email only", () => {
+    expect([...EMAIL_KINDS].sort()).toEqual(["dose_evening", "dose_not_ticked", "injection_overdue", "injection_soon"]);
+    expect(PUSH_KINDS.has("dose_evening")).toBe(false);
+    expect(EMAIL_KINDS.has("dose_due")).toBe(false);
+  });
+
   it("reminds 7 and 2 days before an injection, at its time", () => {
     const anchored = (now: string) => notices(now, { items: [docp], latestAnchor: { anchoredOn: "2026-09-22", cycleNo: 3 } });
     // Due 20 Oct; 13 Oct is 7 days before.
@@ -89,11 +110,12 @@ describe("dueNotices", () => {
     const all = [
       ...notices("2026-10-13T07:00:00Z"),
       ...notices("2026-10-13T09:00:00Z"),
+      ...notices("2026-10-13T20:00:00Z"),
       ...notices("2026-10-13T08:00:00Z", { items: [docp], latestAnchor: { anchoredOn: "2026-09-22", cycleNo: 3 } }),
       ...notices("2026-10-21T08:00:00Z", { items: [docp], latestAnchor: { anchoredOn: "2026-09-22", cycleNo: 3 } }),
       ...notices("2026-10-02T09:00:00Z", { items: [test], latestAnchor: { anchoredOn: "2026-09-22", cycleNo: 3 } }),
     ];
-    expect(all).toHaveLength(5);
+    expect(all).toHaveLength(6);
     for (const n of all) {
       expect(`${n.title} ${n.body}`).not.toMatch(BANNED);
       expect(`${n.title} ${n.body}`).not.toMatch(DOSE);

@@ -1,6 +1,7 @@
 import "server-only";
 import { createClient } from "@supabase/supabase-js";
 import { supabaseEnv } from "./env";
+import { cleanKey } from "@/lib/env/key";
 
 /**
  * A Supabase client with the secret key, for the reminder scheduler and for
@@ -10,7 +11,7 @@ import { supabaseEnv } from "./env";
  */
 export function createAdminClient() {
   const env = supabaseEnv();
-  const secret = process.env.SUPABASE_SECRET_KEY?.trim();
+  const secret = cleanKey(process.env.SUPABASE_SECRET_KEY);
   if (!env || !secret) return null;
   return createClient(env.url, secret, { auth: { persistSession: false, autoRefreshToken: false } });
 }

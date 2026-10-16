@@ -1,11 +1,13 @@
+import { cleanKey } from "@/lib/env/key";
+
 /**
  * Supabase connection settings. Both are public by design: the publishable key
  * only grants what row-level security allows. Secret keys never live here.
  */
 export function supabaseEnv(): { url: string; key: string } | null {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-  return url && key ? { url: projectOrigin(url), key: key.trim() } : null;
+  const key = cleanKey(process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY);
+  return url && key ? { url: projectOrigin(url), key } : null;
 }
 
 /**

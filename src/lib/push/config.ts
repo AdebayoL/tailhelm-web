@@ -1,3 +1,5 @@
+import { cleanKey } from "@/lib/env/key";
+
 /**
  * Web push settings. The public key is given to each phone when it subscribes;
  * the private key signs every send and never leaves the server.
@@ -8,12 +10,12 @@ export type PushConfig = { publicKey: string; privateKey: string; subject: strin
 export const PUSH_CONTACT = "mailto:hello@tailhelm.com";
 
 export function vapidPublicKey(): string | null {
-  return process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY?.trim() || null;
+  return cleanKey(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY) ?? null;
 }
 
 export function pushConfig(): PushConfig | null {
   const publicKey = vapidPublicKey();
-  const privateKey = process.env.VAPID_PRIVATE_KEY?.trim();
+  const privateKey = cleanKey(process.env.VAPID_PRIVATE_KEY);
   return publicKey && privateKey ? { publicKey, privateKey, subject: PUSH_CONTACT } : null;
 }
 

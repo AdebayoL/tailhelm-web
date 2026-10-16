@@ -1,9 +1,11 @@
 "use server";
 
 import { refresh } from "next/cache";
+import { after } from "next/server";
 import { parsePlanSchedule } from "@/engine/schedule";
 import { toLocal, zonedTimeToInstant } from "@/engine/time";
 import { requireOwner } from "@/lib/auth/session";
+import { tellHouseholdOfTick } from "@/lib/push/household";
 import { createClient } from "@/lib/supabase/server";
 import {
   STRESS_EVENT_KIND,
@@ -155,6 +157,18 @@ async function recordTick({
     });
     return { failed: true };
   }
+  after(() =>
+    tellHouseholdOfTick({
+      planItemId: item.id,
+      dogId: item.dog_conditions.dog_id,
+      givenOn,
+      slot,
+      extraNo,
+      givenAt,
+      by: owner.userId,
+      timeZone,
+    }),
+  );
   refresh();
   return { done: true };
 }

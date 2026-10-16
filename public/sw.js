@@ -147,3 +147,45 @@ self.addEventListener("message", (event) => {
   if (type === "warm") event.waitUntil(warm());
   else if (type === "clear") event.waitUntil(clearPages());
 });
+
+/* Notifications: reminder layer 2. Each one carries a title, words, a tag and
+ * the page to open. They name medicines and times, never a dose. A later
+ * notification with the same tag replaces the earlier one, so "Sam gave it"
+ * takes the place of the reminder for that dose. */
+self.addEventListener("push", (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch {
+    data = { body: event.data ? event.data.text() : "" };
+  }
+  event.waitUntil(
+    self.registration.showNotification(data.title || "Tailhelm", {
+      body: data.body || "",
+      tag: data.tag || undefined,
+      renotify: Boolean(data.tag),
+      icon: "/icons/icon-192.png",
+      badge: "/icons/icon-192.png",
+      data: { url: data.url || "/today" },
+    }),
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const target = new URL((event.notification.data && event.notification.data.url) || "/today", self.location.origin);
+  // Only ever opens a Tailhelm page.
+  const url = target.origin === self.location.origin ? target.href : new URL("/today", self.location.origin).href;
+  event.waitUntil(
+    (async () => {
+      const open = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+      const app = open.find((c) => new URL(c.url).origin === self.location.origin);
+      if (app) {
+        await app.focus();
+        if ("navigate" in app) await app.navigate(url);
+        return;
+      }
+      await self.clients.openWindow(url);
+    })(),
+  );
+});

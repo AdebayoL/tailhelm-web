@@ -52,8 +52,16 @@ function load(fetchImpl: (input: Request | string) => Promise<Response>) {
     location: new URL(ORIGIN),
     addEventListener: (type: string, h: Handler) => (handlers[type] = h),
     skipWaiting: () => {},
-    clients: { claim: async () => {} },
+    clients: {
+      claim: async () => {},
+      matchAll: async () => windows,
+      openWindow: async (url: string) => opened.push(url),
+    },
+    registration: { showNotification: async (title: string, options: unknown) => shown.push({ title, options }) },
   };
+  const shown: { title: string; options: unknown }[] = [];
+  const opened: string[] = [];
+  const windows: { url: string; focus: () => Promise<void>; navigate: (url: string) => Promise<void> }[] = [];
   const context = vm.createContext({ self, caches, fetch: fetchImpl, URL, Request, Response, Promise, Date, Number, Math, console });
   vm.runInContext(source, context);
   const classify = context.classify as (r: { method: string; url: string; mode: string }, origin: string) => string | null;
@@ -68,7 +76,12 @@ function load(fetchImpl: (input: Request | string) => Promise<Response>) {
     handlers.message({ origin: ORIGIN, data: { type }, waitUntil: (p: Promise<unknown>) => (done = p) });
     await done;
   }
-  return { caches, classify, navigate, message };
+  async function dispatch(type: string, event: object) {
+    let done: Promise<unknown> = Promise.resolve();
+    handlers[type]({ ...event, waitUntil: (p: Promise<unknown>) => (done = p) });
+    await done;
+  }
+  return { caches, classify, navigate, message, dispatch, shown, opened, windows };
 }
 
 /** A navigation request; Request in Node cannot be given mode "navigate". */
@@ -165,5 +178,38 @@ describe("service worker", () => {
     fetched.length = 0;
     await sw.message("warm");
     expect(fetched).toEqual(["vet-visit"]);
+  });
+});
+
+describe("service worker notifications", () => {
+  const sw = () => load(async () => new Response(""));
+  const push = (body: unknown) => ({ data: { json: () => body, text: () => String(body) } });
+
+  it("shows a reminder with its tag, so a later tick replaces it", async () => {
+    const w = sw();
+    await w.dispatch("push", push({ title: "Time for Bella’s Prednisolone", body: "Check the app before giving.", tag: "dose:p:2026-10-13:08:00", url: "/today" }));
+    expect(w.shown).toEqual([
+      {
+        title: "Time for Bella’s Prednisolone",
+        options: expect.objectContaining({ body: "Check the app before giving.", tag: "dose:p:2026-10-13:08:00", renotify: true, data: { url: "/today" } }),
+      },
+    ]);
+  });
+
+  it("opens the page the notification names, and never another site", async () => {
+    const w = sw();
+    const click = (url: string) => ({ notification: { close: () => {}, data: { url } } });
+    await w.dispatch("notificationclick", click("/reminders"));
+    await w.dispatch("notificationclick", click("https://example.com/phish"));
+    expect(w.opened).toEqual([`${ORIGIN}/reminders`, `${ORIGIN}/today`]);
+  });
+
+  it("brings an open Tailhelm window forward instead of opening another", async () => {
+    const w = sw();
+    const went: string[] = [];
+    w.windows.push({ url: `${ORIGIN}/trends`, focus: async () => {}, navigate: async (url) => void went.push(url) });
+    await w.dispatch("notificationclick", { notification: { close: () => {}, data: { url: "/today" } } });
+    expect(went).toEqual([`${ORIGIN}/today`]);
+    expect(w.opened).toEqual([]);
   });
 });

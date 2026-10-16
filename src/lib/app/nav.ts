@@ -22,6 +22,16 @@ export const MORE = [
 
 export const EMERGENCY_PATH = "/emergency";
 
+/**
+ * What the Dog tab is called: the dog's own name when the household has one
+ * dog, "Dogs" when it has several, and "Dog" before any dog is added.
+ */
+export function dogTabLabel(names: string[]): string {
+  const named = names.map((n) => n.trim()).filter(Boolean);
+  if (named.length === 0) return "Dog";
+  return named.length === 1 ? named[0] : "Dogs";
+}
+
 const under = (pathname: string, href: string) => pathname === href || pathname.startsWith(`${href}/`);
 
 /** The tab a path belongs to, so the tab bar can mark it, or null outside the tabs. The Dog tab's screens count as Dog. */

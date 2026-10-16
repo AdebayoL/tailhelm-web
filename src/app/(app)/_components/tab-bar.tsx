@@ -6,7 +6,7 @@ import { Icon } from "@/app/_components/icon";
 import { TABS, tabFor } from "@/lib/app/nav";
 
 /** The four tabs: teal icon, label and a 2 px indicator on the keyline for the one in use. */
-export function TabBar() {
+export function TabBar({ dogLabel = "Dog" }: { dogLabel?: string }) {
   const pathname = usePathname();
   // The vet visit is handed to a vet, so it stands alone.
   if (pathname === "/vet-visit") return null;
@@ -18,7 +18,7 @@ export function TabBar() {
         return (
           <Link key={tab.href} href={tab.href} className={on ? "tab on" : "tab"} aria-current={on ? "page" : undefined}>
             <Icon name={tab.icon} />
-            {tab.label}
+            <span className="tab-label">{tab.href === "/dog" ? dogLabel : tab.label}</span>
           </Link>
         );
       })}

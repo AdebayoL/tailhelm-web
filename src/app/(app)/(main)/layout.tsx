@@ -25,7 +25,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <Suspense fallback={null}>
           <SideDog />
         </Suspense>
-        <SideNav />
+        <Suspense fallback={<SideNav />}>
+          <NamedSideNav />
+        </Suspense>
         <div className="side-foot">
           <Suspense fallback={null}>
             <SideFoot />
@@ -33,10 +35,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
       <div className="app-main">
-        <AppHeader />
+        <Suspense fallback={<AppHeader />}>
+          <NamedHeader />
+        </Suspense>
         {children}
       </div>
-      <TabBar />
+      <Suspense fallback={<TabBar />}>
+        <NamedTabBar />
+      </Suspense>
     </div>
   );
 }
@@ -73,4 +79,20 @@ async function SideFoot() {
       </div>
     </>
   );
+}
+
+/** The Dog tab carries the dog's name once it is known. */
+async function NamedTabBar() {
+  const { dogTab } = await getShell();
+  return <TabBar dogLabel={dogTab} />;
+}
+
+async function NamedSideNav() {
+  const { dogTab } = await getShell();
+  return <SideNav dogLabel={dogTab} />;
+}
+
+async function NamedHeader() {
+  const { dogTab } = await getShell();
+  return <AppHeader dogLabel={dogTab} />;
 }

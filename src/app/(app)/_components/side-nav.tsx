@@ -11,7 +11,7 @@ import { MORE, TABS, sideItemFor } from "@/lib/app/nav";
  * then the Dog tab's two screens. Keys 1 to 4 open the four, as the hints
  * beside them say.
  */
-export function SideNav() {
+export function SideNav({ dogLabel = "Dog" }: { dogLabel?: string }) {
   const current = sideItemFor(usePathname());
   const router = useRouter();
 
@@ -41,7 +41,7 @@ export function SideNav() {
         aria-keyshortcuts={key}
       >
         <Icon name={i.icon} />
-        {i.label}
+        {i.href === "/dog" ? dogLabel : i.label}
       </Link>
     );
   };

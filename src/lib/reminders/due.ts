@@ -1,5 +1,6 @@
 import { type LocalDate, type LocalTime, zonedTimeToInstant } from "@/engine/time";
 import { dayMonth } from "@/lib/app/dates";
+import { describeSchedule } from "@/lib/plan/input";
 import { LATE_AFTER_MS, type Tick, type Today, type TodayItem } from "@/lib/today/today";
 
 /**
@@ -26,6 +27,7 @@ export type NoticeKind =
   | "dose_evening"
   | "dose_escalation"
   | "dose_ticked"
+  | "plan_changed"
   | "injection_soon"
   | "injection_overdue"
   | "test_due"
@@ -40,6 +42,7 @@ export const PUSH_KINDS: ReadonlySet<NoticeKind> = new Set([
   "dose_not_ticked",
   "dose_escalation",
   "dose_ticked",
+  "plan_changed",
   "injection_soon",
   "injection_overdue",
   "test_due",
@@ -188,6 +191,43 @@ export function tickedNotice(args: {
     title: `${by} gave ${owned(dogName, item, "medicine")} at ${at}`,
     body: extraNo > 0 ? `Recorded as an extra dose for ${slot}.` : `The ${slot} dose is ticked.`,
     url: "/today",
+    at: now,
+  };
+}
+
+/** A medicine added to the plan, one replacing another, or one taken off. */
+export type PlanChange =
+  | { kind: "added"; item: TodayItem }
+  | { kind: "replaced"; item: TodayItem; was: TodayItem }
+  | { kind: "removed"; item: TodayItem };
+
+/**
+ * What the rest of the household sees the moment the plan changes, because a
+ * calendar can take hours to show it. Names and times only, never a dose.
+ * Null for a plan item that has no reminders, such as a stress event plan.
+ */
+export function planChangedNotice(args: { dogName: string; by: string; change: PlanChange; now: Date }): Notice | null {
+  const { dogName, by, change, now } = args;
+  const { item } = change;
+  const kind = item.schedule_json.kind;
+  if (kind !== "fixed" && kind !== "interval" && kind !== "offset") return null;
+  const name = item.product ?? "A medicine";
+  const when = describeSchedule(item.schedule_json);
+  const what =
+    change.kind === "added"
+      ? `${name} was added: ${when}.`
+      : change.kind === "removed"
+        ? `${name} was taken off the plan, so its reminders have stopped.`
+        : change.was.product === item.product
+          ? `${name} was changed: ${when}.`
+          : `${name} replaces ${change.was.product ?? "a medicine"}: ${when}.`;
+  return {
+    kind: "plan_changed",
+    ref: `${item.id}:${change.kind}`,
+    tag: `plan:${item.id}`,
+    title: `${by} changed ${dogName}’s plan`,
+    body: `${what} Calendars can take a few hours to show it.`,
+    url: "/dog",
     at: now,
   };
 }

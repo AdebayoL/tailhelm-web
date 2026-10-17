@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { type Tick, type TodayInput, buildToday } from "@/lib/today/today";
-import { CATCH_UP_MS, EMAIL_KINDS, PUSH_KINDS, dueNotices, tickedNotice, usualGiver } from "./due";
+import { CATCH_UP_MS, EMAIL_KINDS, PUSH_KINDS, dueNotices, planChangedNotice, tickedNotice, usualGiver } from "./due";
 
 const BANNED = /\b(safe|normal|fine|streak|compliance|administer|dosage|good|bad)\b/i;
 const DOSE = /\d\s*(mg|ml|mcg|µg|tablet)/i;
@@ -183,5 +183,48 @@ describe("tickedNotice", () => {
     const n = tickedNotice({ dogName: "Bella", item: pred, date: "2026-10-13", slot: "08:00", extraNo: 0, by: "Sam", at: "08:04", now: new Date() });
     expect([n.title, n.body, n.tag]).toEqual(["Sam gave Bella’s Prednisolone at 08:04", "The 08:00 dose is ticked.", "dose:pred:2026-10-13:08:00"]);
     expect(`${n.title} ${n.body}`).not.toMatch(BANNED);
+  });
+});
+
+describe("planChangedNotice", () => {
+  const changed = (change: Parameters<typeof planChangedNotice>[0]["change"]) =>
+    planChangedNotice({ dogName: "Bella", by: "Sam", change, now: new Date("2026-10-17T08:00:00Z") });
+  const pred2 = { ...pred, id: "pred2", schedule_json: { kind: "fixed" as const, times: ["07:00", "19:00"] } };
+
+  it("tells the household what changed and that calendars lag, opening the plan", () => {
+    const n = changed({ kind: "replaced", item: pred2, was: pred })!;
+    expect([n.kind, n.ref, n.tag, n.title, n.body, n.url]).toEqual([
+      "plan_changed",
+      "pred2:replaced",
+      "plan:pred2",
+      "Sam changed Bella’s plan",
+      "Prednisolone was changed: twice daily at 07:00 and 19:00. Calendars can take a few hours to show it.",
+      "/dog",
+    ]);
+    expect(PUSH_KINDS.has("plan_changed")).toBe(true);
+    expect(EMAIL_KINDS.has("plan_changed")).toBe(false);
+  });
+
+  it("names a medicine added, one replacing another, and one taken off", () => {
+    expect(changed({ kind: "added", item: docp })?.body).toBe(
+      "Zycortal was added: every 28 days, reminder at 09:00. Calendars can take a few hours to show it.",
+    );
+    expect(changed({ kind: "replaced", item: { ...pred2, product: "Hydrocortisone" }, was: pred })?.body).toBe(
+      "Hydrocortisone replaces Prednisolone: twice daily at 07:00 and 19:00. Calendars can take a few hours to show it.",
+    );
+    expect(changed({ kind: "removed", item: test })?.body).toBe(
+      "Blood test was taken off the plan, so its reminders have stopped. Calendars can take a few hours to show it.",
+    );
+  });
+
+  it("says nothing about a plan item that has no reminders", () => {
+    expect(changed({ kind: "added", item: { id: "kennels", product: null, schedule_json: { kind: "event" } } })).toBeNull();
+  });
+
+  it("never carries a dose or a banned word", () => {
+    for (const n of [changed({ kind: "added", item: pred }), changed({ kind: "removed", item: docp }), changed({ kind: "replaced", item: pred2, was: pred })]) {
+      expect(`${n!.title} ${n!.body}`).not.toMatch(BANNED);
+      expect(`${n!.title} ${n!.body}`).not.toMatch(DOSE);
+    }
   });
 });

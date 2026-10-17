@@ -5,6 +5,7 @@ import { Icon } from "@/app/_components/icon";
 import { addDays, toLocal } from "@/engine/time";
 import { dayMonth } from "@/lib/app/dates";
 import { getShell } from "@/lib/app/shell";
+import { requireSetup } from "@/lib/setup/queries";
 import { formatDate } from "@/lib/plan/input";
 import { reminderTimes } from "@/lib/reminders/times";
 import { createClient } from "@/lib/supabase/server";
@@ -35,6 +36,7 @@ const APP_NAMES = { apple: "Apple Calendar", google: "Google Calendar" } as cons
 const FETCHER = { apple: "Apple", google: "Google", other: "your calendar" } as const;
 
 async function Reminders() {
+  await requireSetup();
   const [data, shell] = await Promise.all([getTodayData(), getShell()]);
   if (!data) {
     return (

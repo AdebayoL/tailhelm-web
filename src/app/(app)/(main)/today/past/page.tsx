@@ -8,6 +8,7 @@ import { PAST_DAYS, pastDays } from "@/lib/today/past";
 import { getPastRecords, getTodayData } from "@/lib/today/queries";
 import { getPack } from "@/packs/registry";
 import { Page } from "../../../_components/page";
+import { requireSetup } from "@/lib/setup/queries";
 
 export const metadata: Metadata = { title: "Past days · Tailhelm" };
 
@@ -20,6 +21,7 @@ export default function PastDaysPage() {
 }
 
 async function PastDays() {
+  await requireSetup();
   const data = await getTodayData();
   if (!data) {
     return (

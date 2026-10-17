@@ -5,6 +5,7 @@ import { SheetClose, SheetLink } from "@/app/_components/sheet-link";
 import { type LocalDate, toLocal } from "@/engine/time";
 import { dayMonth, weekdayDate, weekdayDayMonth } from "@/lib/app/dates";
 import { requireOwner } from "@/lib/auth/session";
+import { requireSetup } from "@/lib/setup/queries";
 import { getMyDog } from "@/lib/dogs/queries";
 import { getNotes } from "@/lib/notes/queries";
 import { formatDate } from "@/lib/plan/input";
@@ -74,6 +75,7 @@ const scaleOf = (w: Result) => scaleWords[w.scale ?? "none"];
 
 async function TrendsContent({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const owner = await requireOwner();
+  await requireSetup();
   const [{ period: rawPeriod }, dog] = await Promise.all([searchParams, getMyDog()]);
   const plan = dog ? await getDogPlan(dog.id) : null;
   if (!dog || !plan) {

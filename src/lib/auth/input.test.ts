@@ -41,6 +41,7 @@ describe("isProtectedPath", () => {
   it("protects the app and its sub-pages", () => {
     expect(isProtectedPath("/today")).toBe(true);
     expect(isProtectedPath("/today/log")).toBe(true);
+    expect(isProtectedPath("/setup")).toBe(true);
   });
   it("leaves public pages open", () => {
     expect(isProtectedPath("/")).toBe(false);

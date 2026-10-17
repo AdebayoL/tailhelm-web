@@ -17,7 +17,7 @@ const STATIC = "tailhelm-static-v1";
 const STATIC_LIMIT = 300;
 
 /** The signed-in pages that may be kept for offline use. Matches PROTECTED_PREFIXES. */
-const APP_PAGES = ["/today", "/trends", "/care-team", "/dog", "/emergency", "/vet-visit", "/reminders"];
+const APP_PAGES = ["/today", "/trends", "/care-team", "/dog", "/emergency", "/vet-visit", "/reminders", "/setup"];
 /** Never kept: downloads, not pages. */
 const NEVER_KEEP = ["/dog/export"];
 /** Fetched ahead so they open with no signal even before the owner visits them. */

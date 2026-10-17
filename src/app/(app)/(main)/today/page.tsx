@@ -7,6 +7,7 @@ import { addDays, toLocal } from "@/engine/time";
 import { dayMonth, longDate, weekdayDate, weekdayDayMonth } from "@/lib/app/dates";
 import { cycleView, jewelOf, tileLetters } from "@/lib/app/jewel";
 import { getShell } from "@/lib/app/shell";
+import { requireSetup } from "@/lib/setup/queries";
 import { initial } from "@/lib/app/words";
 import { telHref } from "@/lib/dogs/input";
 import { doseText, formatDate, planLine } from "@/lib/plan/input";
@@ -43,6 +44,7 @@ export default function TodayPage() {
 }
 
 async function TodayContent() {
+  await requireSetup();
   const [data, shell] = await Promise.all([getTodayData(), getShell()]);
   if (!data) {
     return (

@@ -90,8 +90,8 @@ export async function setEmailReminders(form: FormData): Promise<void> {
 
 export type TestState = { outcome?: Outcome | "not_set_up" };
 
-/** Sends a test notification to every phone of the person signed in. */
-export async function sendTestNotification(): Promise<TestState> {
+/** Sends a test notification to every phone of the person signed in. From setup, tapping it goes back to setup. */
+export async function sendTestNotification(from: "reminders" | "setup" = "reminders"): Promise<TestState> {
   const owner = await requireOwner();
   const admin = createAdminClient();
   const config = pushConfig();
@@ -104,7 +104,7 @@ export async function sendTestNotification(): Promise<TestState> {
       tag: "test",
       title: "Tailhelm test",
       body: "Reminders reach this phone.",
-      url: "/reminders",
+      url: from === "setup" ? "/setup?step=test" : "/reminders",
       at: now,
     });
     refresh();

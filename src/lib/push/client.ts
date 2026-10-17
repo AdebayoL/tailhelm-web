@@ -16,6 +16,12 @@ const isAppleMobile = () =>
 const standalone = () =>
   window.matchMedia("(display-mode: standalone)").matches || (navigator as Navigator & { standalone?: boolean }).standalone === true;
 
+/** An iPhone or iPad with Tailhelm open in the browser rather than from the Home Screen: no notifications reach it. */
+export const needsHomeScreen = () => isAppleMobile() && !standalone();
+
+/** Whether this is a phone or tablet rather than a computer, for the words. */
+export const isPhone = () => isAppleMobile() || /Android|Mobile/.test(navigator.userAgent);
+
 export async function phoneState(): Promise<{ state: PhoneState; subscription: PushSubscription | null }> {
   const supported = "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
   if (!supported) return { state: isAppleMobile() && !standalone() ? "needs-home-screen" : "unsupported", subscription: null };

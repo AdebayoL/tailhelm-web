@@ -100,6 +100,8 @@ export type NextAction =
 
 export type TodayInput = {
   now: Date;
+  /** The day to build, when it is not the day `now` falls on, such as yesterday for a dose due just before midnight. */
+  date?: LocalDate;
   timeZone: string;
   me: string;
   items: TodayItem[];
@@ -122,7 +124,7 @@ export type Today = {
 
 export function buildToday(input: TodayInput): Today {
   const { now, timeZone, me, names } = input;
-  const date = toLocal(now, timeZone).date;
+  const date = input.date ?? toLocal(now, timeZone).date;
   const dayStart = zonedTimeToInstant(date, "00:00", timeZone);
   const dayEnd = zonedTimeToInstant(addDays(date, 1), "00:00", timeZone);
 

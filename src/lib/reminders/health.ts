@@ -9,6 +9,8 @@
  * the phone.
  */
 
+import { testUnconfirmed } from "./watchdog";
+
 /** A calendar link with no fetch for this long has stopped. Calendars refresh on their own schedule, often only every few hours. */
 export const CALENDAR_STALE_MS = 48 * 60 * 60 * 1000;
 
@@ -28,9 +30,13 @@ export type HealthFacts = {
   pushPhones: number;
   /** Null when email reminders are not set up on this server. */
   email: { on: boolean; lastFailed: boolean } | null;
+  /** When the last monthly test was sent to this person's phones, if one has been. */
+  monthlyTestAt?: string | null;
+  /** When a test was last confirmed on one of this person's phones. */
+  lastConfirmed?: string | null;
 };
 
-export type HealthIssue = { key: "calendar" | "push" | "email_off" | "email_failed"; text: string };
+export type HealthIssue = { key: "calendar" | "push" | "test" | "email_off" | "email_failed"; text: string };
 
 const CALENDAR_NAMES: Record<CalendarApp, string> = { apple: "Apple Calendar", google: "Google Calendar", other: "Your calendar" };
 
@@ -54,6 +60,12 @@ export function healthIssues(f: HealthFacts, day: (iso: string) => string): Heal
 
   if (f.pushEverSent && f.pushPhones === 0) {
     issues.push({ key: "push", text: "Notifications have stopped reaching your phone." });
+  } else if (
+    f.pushPhones > 0 &&
+    f.monthlyTestAt &&
+    testUnconfirmed({ now: f.now, test: { at: f.monthlyTestAt }, lastConfirmed: f.lastConfirmed ?? null })
+  ) {
+    issues.push({ key: "test", text: `The monthly test notification sent on ${day(f.monthlyTestAt)} wasn’t confirmed.` });
   }
 
   if (f.email && !f.email.on) {

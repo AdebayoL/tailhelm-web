@@ -1,4 +1,4 @@
-import type { Notice } from "@/lib/reminders/due";
+import { HEALTH_KINDS, type Notice } from "@/lib/reminders/due";
 
 /**
  * The words of a reminder email. Pure, so the wording is tested without
@@ -17,8 +17,11 @@ export type EmailMessage = { subject: string; text: string; html: string };
 export function reminderEmail(notice: Notice, appUrl: string): EmailMessage {
   const open = new URL(notice.url, appUrl).toString();
   const settings = new URL("/reminders", appUrl).toString();
-  const off = "You get these emails because email reminders are on. You can turn them off in Reminders.";
-  const text = [notice.title, "", notice.body, "", `Open Tailhelm: ${open}`, "", "—", EMAIL_FOOTER, "", `${off} ${settings}`].join("\n");
+  const health = HEALTH_KINDS.has(notice.kind);
+  const off = health
+    ? "Tailhelm emails you when a reminder stops reaching you, even with reminder emails off."
+    : "You get these emails because email reminders are on. You can turn them off in Reminders.";
+  const text = [notice.title, "", notice.body, "", `Open Tailhelm: ${open}`, "", "—", EMAIL_FOOTER, "", health ? off : `${off} ${settings}`].join("\n");
   const html = `<!doctype html>
 <html lang="en-GB">
 <body style="margin:0;padding:0;background:#F5F7FA;">
@@ -30,7 +33,7 @@ export function reminderEmail(notice: Notice, appUrl: string): EmailMessage {
 <a href="${escape(open)}" style="display:inline-block;padding:14px 24px;border-radius:10px;background:#17324D;color:#FFFFFF;font-weight:600;text-decoration:none;">Open Tailhelm</a>
 </div>
 <p style="margin:24px 0 8px;font-size:14px;line-height:20px;color:#536575;">${escape(EMAIL_FOOTER)}</p>
-<p style="margin:0;font-size:14px;line-height:20px;color:#536575;">${escape(off)} <a href="${escape(settings)}" style="color:#17324D;">Reminders</a></p>
+<p style="margin:0;font-size:14px;line-height:20px;color:#536575;">${escape(off)}${health ? "" : ` <a href="${escape(settings)}" style="color:#17324D;">Reminders</a>`}</p>
 </div>
 </body>
 </html>`;

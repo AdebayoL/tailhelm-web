@@ -28,12 +28,27 @@ export type NoticeKind =
   | "dose_ticked"
   | "injection_soon"
   | "injection_overdue"
-  | "test_due";
+  | "test_due"
+  | "monthly_test"
+  | "phone_lost"
+  | "test_unconfirmed";
 
 /** What reaches a phone. The 21:00 message is email only, because the 2-hour notification already reached the phone. */
-export const PUSH_KINDS: ReadonlySet<NoticeKind> = new Set(["test", "dose_due", "dose_not_ticked", "dose_escalation", "dose_ticked", "injection_soon", "injection_overdue", "test_due"]);
+export const PUSH_KINDS: ReadonlySet<NoticeKind> = new Set([
+  "test",
+  "dose_due",
+  "dose_not_ticked",
+  "dose_escalation",
+  "dose_ticked",
+  "injection_soon",
+  "injection_overdue",
+  "test_due",
+  "monthly_test",
+]);
 /** What is also emailed, as a net under the phone (spec: reminder layer 3). */
 export const EMAIL_KINDS: ReadonlySet<NoticeKind> = new Set(["dose_not_ticked", "dose_evening", "dose_escalation", "injection_soon", "injection_overdue"]);
+/** Reminder health emails (see watchdog.ts). They go out even with reminder emails off, because they say a reminder has stopped reaching someone. */
+export const HEALTH_KINDS: ReadonlySet<NoticeKind> = new Set(["phone_lost", "test_unconfirmed"]);
 
 export type Notice = {
   kind: NoticeKind;
@@ -55,11 +70,13 @@ const owned = (dogName: string, item: TodayItem, fallback: string) => `${dogName
 export const doseTag = (itemId: string, date: LocalDate, slot: LocalTime) => `dose:${itemId}:${date}:${slot}`;
 
 export function dueNotices(today: Today, dogName: string, timeZone: string, now: Date): Notice[] {
+  return dayNotices(today, dogName, timeZone).filter((n) => now.getTime() >= n.at.getTime() && now.getTime() < n.at.getTime() + CATCH_UP_MS);
+}
+
+/** Every reminder one dog's day holds, each at its own time, whether or not that time has come. */
+export function dayNotices(today: Today, dogName: string, timeZone: string): Notice[] {
   const notices: Notice[] = [];
-  const inWindow = (at: Date) => now.getTime() >= at.getTime() && now.getTime() < at.getTime() + CATCH_UP_MS;
-  const add = (n: Notice) => {
-    if (inWindow(n.at)) notices.push(n);
-  };
+  const add = (n: Notice) => notices.push(n);
 
   for (const dose of today.doses) {
     if (dose.status === "given") continue;

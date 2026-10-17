@@ -7,10 +7,12 @@ import { dayMonth, weekdayDate, weekdayDayMonth } from "@/lib/app/dates";
 import { requireOwner } from "@/lib/auth/session";
 import { requireSetup } from "@/lib/setup/queries";
 import { getMyDog } from "@/lib/dogs/queries";
+import { dogHasPlus, hasRecordsBefore } from "@/lib/history/queries";
+import { FREE_DAYS, historyStart } from "@/lib/history/window";
 import { getNotes } from "@/lib/notes/queries";
 import { formatDate } from "@/lib/plan/input";
 import { getDogPlan } from "@/lib/plan/queries";
-import { type ResultType, derivedDefs, resultTypes } from "@/lib/results/input";
+import { type Range, type ResultType, derivedDefs, resultTypes } from "@/lib/results/input";
 import { type Result, getResults } from "@/lib/results/queries";
 import { getTimeZone, householdNames } from "@/lib/today/queries";
 import { getInjectionDates } from "@/lib/treatments/queries";
@@ -27,6 +29,7 @@ import {
 } from "@/lib/trends/chart";
 import { type Scale, WEIGHT_TYPE, kgFigure } from "@/lib/weight/input";
 import { getPack } from "@/packs/registry";
+import { HistoryLine } from "../../_components/history-line";
 import { Page } from "../../_components/page";
 import { removeNote, removeResult } from "./actions";
 import { LabList, LabTable, labRows, rangeText } from "./lab-report";
@@ -92,25 +95,33 @@ async function TrendsContent({ searchParams }: { searchParams: Promise<Record<st
     );
   }
 
-  const period = parsePeriod(rawPeriod);
   const pack = getPack(plan.condition.condition_key);
   const types = resultTypes(pack);
   const injectionItems = plan.items.filter((i) => i.schedule_json.kind === "interval");
-  const [results, allWeights, notes, timeZone, names] = await Promise.all([
+  const [results, allWeights, allNotes, timeZone, names, plus] = await Promise.all([
     getResults(plan.condition.id, types.map((t) => t.key)),
     getResults(plan.condition.id, [WEIGHT_TYPE], 500),
     getNotes(dog.id),
     getTimeZone(owner.userId),
     householdNames(dog.id),
+    dogHasPlus(dog.id),
   ]);
   const local = (at: string) => toLocal(new Date(at), timeZone);
   const today = local(new Date().toISOString()).date;
+  // Free accounts see the last 30 days; Plus can choose any period.
+  const period = plus ? parsePeriod(rawPeriod) : "30d";
+  const windowStart = historyStart(today, plus);
+  const shown = (at: string) => windowStart === null || local(at).date >= windowStart;
   const earliest = allWeights.length > 0 ? local(allWeights[allWeights.length - 1].taken_at).date : null;
   const from = periodStart(period, today, earliest);
-  const injections = await getInjectionDates(
-    injectionItems.map((i) => i.id),
-    from,
-  );
+  const [injections, older] = await Promise.all([
+    getInjectionDates(
+      injectionItems.map((i) => i.id),
+      from,
+    ),
+    windowStart ? hasRecordsBefore(dog.id, plan.condition.id, windowStart, timeZone) : false,
+  ]);
+  const notes = allNotes.filter((n) => shown(n.started_at));
   const who = (profile: string | null) => (profile && names[profile]) || "someone in the household";
   const weights = allWeights.filter((w) => local(w.taken_at).date >= from);
   const sameYear = (d: LocalDate) => d.slice(0, 4) === today.slice(0, 4);
@@ -128,7 +139,7 @@ async function TrendsContent({ searchParams }: { searchParams: Promise<Record<st
   );
 
   return (
-    <Page title="Trends" sub={`${dog.name} · ${SUB}`} actions={<PeriodSwitch period={period} />} band="overlap">
+    <Page title="Trends" sub={`${dog.name} · ${SUB}`} actions={plus ? <PeriodSwitch period={period} /> : undefined} band="overlap">
       {weights.length === 0 ? (
         <section className="card lg stack-16" aria-label="Weight">
           <div className="kicker">
@@ -165,7 +176,9 @@ async function TrendsContent({ searchParams }: { searchParams: Promise<Record<st
         <LabCard
           key={type.key}
           type={type}
-          reports={results.filter((r) => r.type_key === type.key)}
+          reports={results.filter((r) => r.type_key === type.key && shown(r.taken_at))}
+          olderKept={results.some((r) => r.type_key === type.key && !shown(r.taken_at))}
+          lastRanges={results.find((r) => r.type_key === type.key)?.ranges_json ?? {}}
           dogName={dog.name}
           conditionId={plan.condition.id}
           today={today}
@@ -176,7 +189,9 @@ async function TrendsContent({ searchParams }: { searchParams: Promise<Record<st
         />
       ))}
 
-      <Notes notes={notes} dogId={dog.id} today={today} local={local} who={who} me={owner.userId} />
+      <Notes notes={notes} olderKept={notes.length < allNotes.length} dogId={dog.id} today={today} local={local} who={who} me={owner.userId} />
+
+      {older && <HistoryLine />}
     </Page>
   );
 }
@@ -367,6 +382,8 @@ function typedIn(report: Result, local: Local, who: (p: string | null) => string
 function LabCard({
   type,
   reports,
+  olderKept,
+  lastRanges,
   dogName,
   conditionId,
   today,
@@ -376,7 +393,12 @@ function LabCard({
   me,
 }: {
   type: ResultType;
+  /** The reports the account's history reaches, latest first. */
   reports: Result[];
+  /** Whether older reports are kept beyond a free account's 30 days. */
+  olderKept: boolean;
+  /** The ranges on the latest report of all, to start the next one from. */
+  lastRanges: Record<string, Range>;
   dogName: string;
   conditionId: string;
   today: LocalDate;
@@ -391,7 +413,7 @@ function LabCard({
       icon="add"
       intro="Copy each number and the range printed beside it on the lab report. Leave a range blank if the report has none."
     >
-      <ResultForm conditionId={conditionId} type={type} derived={derivedDefs(pack, type.key)} today={today} lastRanges={reports[0]?.ranges_json ?? {}} />
+      <ResultForm conditionId={conditionId} type={type} derived={derivedDefs(pack, type.key)} today={today} lastRanges={lastRanges} />
     </SheetLink>
   );
   const chip = <span className="chip chip-outline">From lab report</span>;
@@ -403,7 +425,7 @@ function LabCard({
           <span className="m-meas">Blood tests</span>
         </div>
         <div className="stack-4">
-          <h2 className="r-h">No lab reports yet</h2>
+          <h2 className="r-h">{olderKept ? `No lab reports in the last ${FREE_DAYS} days` : "No lab reports yet"}</h2>
           <p className="prov">
             Type in the results from a printed lab report, and each one shows against the range printed on it.
           </p>
@@ -489,6 +511,7 @@ function LabCard({
 
 function Notes({
   notes,
+  olderKept,
   dogId,
   today,
   local,
@@ -496,6 +519,8 @@ function Notes({
   me,
 }: {
   notes: Awaited<ReturnType<typeof getNotes>>;
+  /** Whether older notes are kept beyond a free account's 30 days. */
+  olderKept: boolean;
   dogId: string;
   today: LocalDate;
   local: Local;
@@ -523,7 +548,12 @@ function Notes({
         </button>
       </form>
     );
-  const empty = <p className="prov">No notes yet. A note keeps what you noticed, with your name and the time, for your vet.</p>;
+  const empty = (
+    <p className="prov">
+      {olderKept ? `No notes in the last ${FREE_DAYS} days.` : "No notes yet."} A note keeps what you noticed, with your name and the
+      time, for your vet.
+    </p>
+  );
 
   return (
     <>

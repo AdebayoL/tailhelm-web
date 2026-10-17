@@ -1,4 +1,5 @@
 import { type LocalDate, addDays, addMonths, daysBetween } from "@/engine/time";
+import { historyStart } from "@/lib/history/window";
 import type { Range } from "@/lib/results/input";
 import { type Scale, kgFigure } from "@/lib/weight/input";
 
@@ -26,9 +27,12 @@ const month = (date: LocalDate) => MONTHS[Number(date.slice(5, 7)) - 1];
 const year = (date: LocalDate) => date.slice(0, 4);
 const dayMonth = (date: LocalDate) => `${Number(date.slice(8, 10))} ${month(date)}`;
 
-/** The first day the period shows: whole months for six months and all, so the axis starts on a month. */
+/**
+ * The first day the period shows: for 30 days, the free plan's history line;
+ * whole months for six months and all, so the axis starts on a month.
+ */
 export function periodStart(period: Period, today: LocalDate, earliest: LocalDate | null): LocalDate {
-  if (period === "30d") return addDays(today, -30);
+  if (period === "30d") return historyStart(today, false) as LocalDate;
   const sixMonths = firstOfMonth(addMonths(today, -6));
   if (period === "6m") return sixMonths;
   return earliest && earliest < sixMonths ? firstOfMonth(earliest) : sixMonths;

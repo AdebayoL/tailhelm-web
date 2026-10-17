@@ -1,6 +1,6 @@
 import "server-only";
 import { cache } from "react";
-import { addDays, toLocal, zonedTimeToInstant } from "@/engine/time";
+import { type LocalDate, addDays, toLocal, zonedTimeToInstant } from "@/engine/time";
 import { requireOwner } from "@/lib/auth/session";
 import { type Dog, getMyDog } from "@/lib/dogs/queries";
 import { type DogPlan, getDogPlan } from "@/lib/plan/queries";
@@ -9,7 +9,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getPack } from "@/packs/registry";
 import { NOTE_KIND } from "@/lib/notes/input";
 import { type InjectionInfo, getInjectionInfo } from "@/lib/treatments/queries";
-import { PAST_DAYS } from "./past";
+import { STRESS_EVENT_KIND } from "./past";
 import { type PlannedEvent, type Tick, type TodayInput } from "./today";
 
 export type QuickCheck = {
@@ -125,7 +125,7 @@ export async function getTodayData(): Promise<TodayData | null> {
   return { dog, plan, input, injections, checks, eventOwners };
 }
 
-export const STRESS_EVENT_KIND = "stressful_event";
+export { STRESS_EVENT_KIND };
 
 /** Stressful events that end today or later, as dates on the owner's clock. */
 async function getStressEvents(
@@ -176,43 +176,37 @@ async function getQuickChecks(
   return (data ?? []) as QuickCheck[];
 }
 
-/** The signs ticked, notes and stressful days for Past days, from the start of the window. */
+/** The signs ticked, notes and stressful days for Past days, from the start of the window (null for all of them). */
 export async function getPastRecords(
   dogId: string,
   conditionId: string | null,
   typeKey: string | null,
   timeZone: string,
-  now: Date,
+  fromDate: LocalDate | null,
 ) {
   const supabase = await createClient();
-  const from = zonedTimeToInstant(addDays(toLocal(now, timeZone).date, -(PAST_DAYS - 1)), "00:00", timeZone).toISOString();
-  const [checks, notes, stress] = await Promise.all([
+  const from = fromDate && zonedTimeToInstant(fromDate, "00:00", timeZone).toISOString();
+  const since = <Q extends { gte: (column: string, value: string) => Q }>(query: Q, column: string) =>
+    from ? query.gte(column, from) : query;
+  const stress = supabase.from("events").select("id, note, started_at, ended_at").eq("dog_id", dogId).eq("kind", STRESS_EVENT_KIND);
+  const [checks, notes, stressful] = await Promise.all([
     conditionId && typeKey
-      ? supabase
-          .from("observations")
-          .select("taken_at, values_json, recorded_by")
-          .eq("dog_condition_id", conditionId)
-          .eq("type_key", typeKey)
-          .gte("taken_at", from)
+      ? since(
+          supabase.from("observations").select("taken_at, values_json, recorded_by").eq("dog_condition_id", conditionId).eq("type_key", typeKey),
+          "taken_at",
+        ).order("taken_at", { ascending: false })
       : Promise.resolve({ data: [], error: null }),
-    supabase
-      .from("events")
-      .select("id, started_at, note, recorded_by, created_at")
-      .eq("dog_id", dogId)
-      .eq("kind", NOTE_KIND)
-      .gte("started_at", from),
-    supabase
-      .from("events")
-      .select("id, note, started_at, ended_at")
-      .eq("dog_id", dogId)
-      .eq("kind", STRESS_EVENT_KIND)
-      .or(`started_at.gte.${from},ended_at.gte.${from}`),
+    since(supabase.from("events").select("id, started_at, note, recorded_by, created_at").eq("dog_id", dogId).eq("kind", NOTE_KIND), "started_at").order(
+      "started_at",
+      { ascending: false },
+    ),
+    from ? stress.or(`started_at.gte.${from},ended_at.gte.${from}`) : stress,
   ]);
-  const failed = checks.error ?? notes.error ?? stress.error;
+  const failed = checks.error ?? notes.error ?? stressful.error;
   if (failed) throw new Error(`Could not load past days: ${failed.message}`);
   return {
     checks: (checks.data ?? []) as { taken_at: string; values_json: Record<string, boolean>; recorded_by: string | null }[],
     notes: (notes.data ?? []) as { id: string; started_at: string; note: string; recorded_by: string | null; created_at: string | null }[],
-    stress: (stress.data ?? []) as { id: string; note: string | null; started_at: string; ended_at: string | null }[],
+    stress: (stressful.data ?? []) as { id: string; note: string | null; started_at: string; ended_at: string | null }[],
   };
 }

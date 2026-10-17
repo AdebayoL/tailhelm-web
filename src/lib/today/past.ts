@@ -1,8 +1,9 @@
 import { type LocalDate, type LocalTime, addDays, toLocal } from "@/engine/time";
+import { historyStart } from "@/lib/history/window";
 import type { Sign } from "@/lib/signs/signs";
 
-/** How far back Past days reaches: the free plan's history window. */
-export const PAST_DAYS = 30;
+/** The event kind of a stressful day the household plans or records. */
+export const STRESS_EVENT_KIND = "stressful_event";
 
 export type PastSign = { key: string; label: string; by: string | null; time: LocalTime };
 export type PastNote = { id: string; text: string; by: string | null; time: LocalTime | null };
@@ -14,17 +15,17 @@ type NoteRow = { id: string; started_at: string; note: string; recorded_by: stri
 type StressRow = { id: string; note: string | null; started_at: string; ended_at: string | null };
 
 /**
- * Each day in the window that has something on it, latest first: the signs
- * ticked (first tick of each, with who and when, in the pack's order), the
- * notes about that day, and any stressful day it fell in.
+ * Each day from `from` (null for every day recorded) to today that has
+ * something on it, latest first: the signs ticked (first tick of each, with
+ * who and when, in the pack's order), the notes about that day, and any
+ * stressful day it fell in.
  */
 export function pastDays(
   input: { checks: CheckRow[]; notes: NoteRow[]; stress: StressRow[]; signs: Sign[] },
   today: LocalDate,
   timeZone: string,
-  days = PAST_DAYS,
+  from: LocalDate | null = historyStart(today, false),
 ): PastDay[] {
-  const from = addDays(today, -(days - 1));
   const local = (at: string) => toLocal(new Date(at), timeZone);
   const byDate = new Map<LocalDate, PastDay>();
   const day = (date: LocalDate) => {
@@ -32,7 +33,7 @@ export function pastDays(
     if (!d) byDate.set(date, (d = { date, signs: [], notes: [], stress: [] }));
     return d;
   };
-  const inWindow = (date: LocalDate) => date >= from && date <= today;
+  const inWindow = (date: LocalDate) => (from === null || date >= from) && date <= today;
 
   const first = new Map<string, PastSign & { date: LocalDate }>();
   for (const c of [...input.checks].sort((a, b) => a.taken_at.localeCompare(b.taken_at))) {
@@ -61,7 +62,7 @@ export function pastDays(
     const startsOn = local(e.started_at).date;
     const endsOn = e.ended_at ? local(e.ended_at).date : null;
     const stress = { id: e.id, title: e.note ?? "Stressful day", startsOn, endsOn };
-    for (let date = startsOn > from ? startsOn : from; date <= (endsOn ?? startsOn) && date <= today; date = addDays(date, 1))
+    for (let date = from === null || startsOn > from ? startsOn : from; date <= (endsOn ?? startsOn) && date <= today; date = addDays(date, 1))
       day(date).stress.push(stress);
   }
 

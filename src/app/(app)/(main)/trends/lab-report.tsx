@@ -1,33 +1,10 @@
-import { type Range, type ResultType, derivedDefs } from "@/lib/results/input";
-import type { Result } from "@/lib/results/queries";
+import type { Range } from "@/lib/results/input";
+import { type LabRow, rangeText } from "@/lib/results/rows";
 import { rangeBar } from "@/lib/trends/chart";
-import type { getPack } from "@/packs/registry";
 
-/** One line of a lab report: a result as typed in, or a value Tailhelm worked out from them. */
-export type LabRow = { key: string; label: string; value: string; unit: string | null; range: Range | null };
-
-/** A lab report's rows: each result as typed in, then the values Tailhelm worked out from them. */
-export function labRows(type: ResultType, report: Result, pack: ReturnType<typeof getPack>): LabRow[] {
-  const fields: LabRow[] = type.fields
-    .filter((f) => report.values_json[f.key] !== undefined)
-    .map((f) => ({
-      key: f.key,
-      label: f.label,
-      value: String(Number(report.values_json[f.key].toFixed(3))),
-      unit: f.unit,
-      range: report.ranges_json?.[f.key] ?? null,
-    }));
-  const derived: LabRow[] = derivedDefs(pack, type.key)
-    .filter((d) => report.derived_json?.[d.key] !== undefined)
-    .map((d) => ({ key: d.key, label: d.name, value: report.derived_json![d.key].toFixed(1), unit: null, range: null }));
-  return [...fields, ...derived];
-}
+export { type LabRow, labRows, rangeText } from "@/lib/results/rows";
 
 const num = (n: number) => String(Number(n.toFixed(3)));
-
-export function rangeText(range: Range): string {
-  return `${num(range.low)}–${num(range.high)}`;
-}
 
 /** Inside or outside the range on the owner's own report; never a judgement of the number. */
 function Reading({ value, range, sm = false }: { value: number; range: Range | null; sm?: boolean }) {

@@ -3,10 +3,13 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { addDays, toLocal } from "@/engine/time";
 import { weekdayDate, weekdayDayMonth } from "@/lib/app/dates";
+import { dogHasPlus, hasRecordsBefore } from "@/lib/history/queries";
+import { FREE_DAYS, historyStart } from "@/lib/history/window";
 import { signsType } from "@/lib/signs/signs";
-import { PAST_DAYS, pastDays } from "@/lib/today/past";
+import { pastDays } from "@/lib/today/past";
 import { getPastRecords, getTodayData } from "@/lib/today/queries";
 import { getPack } from "@/packs/registry";
+import { HistoryLine } from "../../../_components/history-line";
 import { Page } from "../../../_components/page";
 import { requireSetup } from "@/lib/setup/queries";
 
@@ -38,9 +41,13 @@ async function PastDays() {
 
   const { dog, plan, input } = data;
   const signs = plan ? signsType(getPack(plan.condition.condition_key)) : null;
-  const records = await getPastRecords(dog.id, plan?.condition.id ?? null, signs?.key ?? null, input.timeZone, input.now);
   const today = toLocal(input.now, input.timeZone).date;
-  const days = pastDays({ ...records, signs: signs?.signs ?? [] }, today, input.timeZone);
+  const from = historyStart(today, await dogHasPlus(dog.id));
+  const [records, older] = await Promise.all([
+    getPastRecords(dog.id, plan?.condition.id ?? null, signs?.key ?? null, input.timeZone, from),
+    from ? hasRecordsBefore(dog.id, plan?.condition.id ?? null, from, input.timeZone) : false,
+  ]);
+  const days = pastDays({ ...records, signs: signs?.signs ?? [] }, today, input.timeZone, from);
   const who = (profile: string | null) =>
     profile === input.me ? "You" : ((profile && input.names[profile]) ?? "Someone in the household");
   const dayName = (date: string) =>
@@ -51,12 +58,16 @@ async function PastDays() {
   return (
     <Page
       title="Past days"
-      sub={`${dog.name} · the last ${PAST_DAYS} days, as recorded by the household`}
+      sub={from ? `${dog.name} · the last ${FREE_DAYS} days, as recorded by the household` : `${dog.name} · every day recorded by the household`}
       space={24}
     >
       {days.length === 0 ? (
         <section className="card lg stack-12">
-          <p>Nothing has been ticked, noted or marked as a stressful day in the last {PAST_DAYS} days.</p>
+          <p>
+            Nothing has been ticked, noted or marked as a stressful day{" "}
+            {from ? `in the last ${FREE_DAYS} days` : "yet"}.
+          </p>
+          {older && <HistoryLine />}
           <Link className="lnk" href="/today">
             Back to Today
           </Link>
@@ -119,6 +130,7 @@ async function PastDays() {
             Days with nothing ticked, noted or marked don&rsquo;t show. Weights and lab reports are in{" "}
             <Link href="/trends">Trends</Link>.
           </p>
+          {older && <HistoryLine />}
         </div>
       )}
     </Page>

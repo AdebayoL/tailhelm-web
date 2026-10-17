@@ -49,6 +49,21 @@ describe("pastDays", () => {
     expect(days).toEqual([]);
   });
 
+  it("reaches back to the first record when the household has Plus", () => {
+    const days = pastDays(
+      {
+        checks: [{ taken_at: "2025-12-01T10:00:00Z", values_json: { weakness: true }, recorded_by: "ade" }],
+        notes: [],
+        stress: [{ id: "e3", note: "Kennels", started_at: "2025-08-01T09:00:00Z", ended_at: "2025-08-02T09:00:00Z" }],
+        signs,
+      },
+      "2026-10-11",
+      tz,
+      null,
+    );
+    expect(days.map((d) => d.date)).toEqual(["2025-12-01", "2025-08-02", "2025-08-01"]);
+  });
+
   it("shows no time for a note written after the day it is about", () => {
     const [day] = pastDays(
       {

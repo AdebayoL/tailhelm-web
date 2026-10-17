@@ -405,8 +405,14 @@ async function Account({ email, userId }: { email: string | null; userId: string
       </dl>
       <div className="stack-4">
         <p className="w6">Your records</p>
-        <p className="hint">Everything Tailhelm holds about your dogs, as one spreadsheet file. Free on every plan.</p>
-        {/* A plain link: the file downloads, so there is no page to prefetch. */}
+        <p className="hint">
+          A plain summary of the last 90 days to show your vet, and everything Tailhelm holds about your dogs as one
+          spreadsheet file. Both are free on every plan.
+        </p>
+        {/* Plain links: the files download, so there is no page to prefetch. */}
+        <a href="/dog/summary" download className="lnk" style={{ alignSelf: "flex-start" }}>
+          Download the 90-day summary (PDF)
+        </a>
         <a href="/dog/export" download className="lnk" style={{ alignSelf: "flex-start" }}>
           Download all records (CSV)
         </a>

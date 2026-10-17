@@ -466,10 +466,21 @@ async function VetVisit() {
 
         {dog.out_of_hours_phone && <CallCard dog={dog} />}
 
-        <p className="prov">
-          Prepared by Tailhelm from records entered by {dog.name}&rsquo;s
-          household. It is not a clinical record.
-        </p>
+        <div className="stack-4">
+          {/* A plain link: the file downloads, so there is no page to prefetch. */}
+          <a
+            href="/dog/summary"
+            download
+            className="lnk"
+            style={{ alignSelf: "flex-start" }}
+          >
+            Download the 90-day summary (PDF)
+          </a>
+          <p className="prov">
+            Prepared by Tailhelm from records entered by {dog.name}&rsquo;s
+            household. It is not a clinical record.
+          </p>
+        </div>
       </div>
     </Page>
   );

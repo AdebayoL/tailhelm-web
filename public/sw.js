@@ -19,7 +19,7 @@ const STATIC_LIMIT = 300;
 /** The signed-in pages that may be kept for offline use. Matches PROTECTED_PREFIXES. */
 const APP_PAGES = ["/today", "/trends", "/care-team", "/dog", "/emergency", "/vet-visit", "/reminders", "/setup"];
 /** Never kept: downloads, not pages. */
-const NEVER_KEEP = ["/dog/export"];
+const NEVER_KEEP = ["/dog/export", "/dog/summary"];
 /** Fetched ahead so they open with no signal even before the owner visits them. */
 const WARM_PAGES = ["/today", "/emergency", "/vet-visit"];
 

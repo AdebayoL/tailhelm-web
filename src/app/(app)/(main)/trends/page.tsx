@@ -10,6 +10,7 @@ import { getMyDog } from "@/lib/dogs/queries";
 import { dogHasPlus, hasRecordsBefore } from "@/lib/history/queries";
 import { FREE_DAYS, historyStart } from "@/lib/history/window";
 import { getNotes } from "@/lib/notes/queries";
+import { tileLetters } from "@/lib/app/jewel";
 import { formatDate } from "@/lib/plan/input";
 import { getDogPlan } from "@/lib/plan/queries";
 import { type Range, type ResultType, derivedDefs, resultTypes } from "@/lib/results/input";
@@ -33,8 +34,10 @@ import { HistoryLine } from "../../_components/history-line";
 import { Page } from "../../_components/page";
 import { removeNote, removeResult } from "./actions";
 import { LabList, LabTable, labRows, rangeText } from "./lab-report";
+import { LabMeasure, typedInAll } from "./lab-history";
 import { NoteForm } from "./note-form";
 import { ResultForm } from "./result-form";
+import { CycleFigure } from "./cycle-figure";
 import { ClinicKey, HomeKey, InjectionKey, WeightChart } from "./weight-chart";
 import { WeightForm } from "./weight-form";
 
@@ -225,15 +228,23 @@ function WeightCards({
 }) {
   const latest = weights[0];
   const points = weights.map((w) => ({ on: local(w.taken_at).date, kg: w.values_json.kg, scale: w.scale }));
-  const phone = weightChart(points, from, today, period, PHONE_FRAME);
+  const phone = weightChart(points, from, today, period, PHONE_FRAME, injections);
   const desk = weightChart(points, from, today, period, DESK_FRAME, injections);
   const kgs = points.map((p) => p.kg);
   const summary = `Weight from ${spanText(period, from, today)}, between ${kgFigure(Math.min(...kgs))} and ${kgFigure(Math.max(...kgs))} kg`;
   const hasClinic = points.some((p) => p.scale === "clinic");
   const hasOther = points.some((p) => p.scale !== "clinic");
-  const otherKey = points.some((p) => p.scale === null) ? "Home or unrecorded scale, not joined: scales can differ" : "Home scale, not joined: scales can differ";
+  const otherKey = points.some((p) => p.scale === null) ? "Home or unrecorded scale" : "Home scale";
   const marked = injectionName && desk.marks.length > 0;
   const source = `${formatDate(local(latest.taken_at).date)} · ${scaleOf(latest).lower} · entered by ${who(latest.recorded_by)}`;
+  // With both kinds of scale in view, the latest of each, side by side and never compared.
+  const latestClinic = weights.find((w) => w.scale === "clinic");
+  const latestOther = weights.find((w) => w.scale !== "clinic");
+  const pair = latestClinic && latestOther ? [latestClinic, latestOther] : null;
+  const pairSource = (w: Result) =>
+    `${scaleOf(w).long} · ${sameYear(local(w.taken_at).date) ? dayMonth(local(w.taken_at).date) : formatDate(local(w.taken_at).date)} · ${who(w.recorded_by)}`;
+  const count = (scale: "clinic" | "other") => points.filter((p) => (scale === "clinic") === (p.scale === "clinic")).length;
+  const mark = injectionName ? tileLetters(injectionName) : null;
 
   return (
     <div className="d-row">
@@ -245,41 +256,61 @@ function WeightCards({
             <span className="d-only">{spanText(period, from, today)}</span>
           </span>
         </div>
-        <div className="wt-head">
-          <p className="figline">
-            <span className="r-fig-md">{kgFigure(latest.values_json.kg)}</span>
-            <span className="unit">kg</span>
-          </p>
-          <p className="prov">{source}</p>
-        </div>
-        <figure className="stack-8 wt-fig">
+        {pair ? (
+          <div className="wt-pair">
+            {pair.map((w) => (
+              <div key={w.id} className="stack-4">
+                <p className="figline">
+                  <span className="r-fig-md">{kgFigure(w.values_json.kg)}</span>
+                  <span className="unit">kg</span>
+                </p>
+                <p className="prov">{pairSource(w)}</p>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="wt-head">
+            <p className="figline">
+              <span className="r-fig-md">{kgFigure(latest.values_json.kg)}</span>
+              <span className="unit">kg</span>
+            </p>
+            <p className="prov">{source}</p>
+          </div>
+        )}
+        <CycleFigure cycle={Boolean(marked)}>
           <div className="m-only">
-            <WeightChart chart={phone} frame={PHONE_FRAME} desk={false} summary={summary} />
+            <WeightChart chart={phone} frame={PHONE_FRAME} desk={false} mark={mark} summary={marked ? `${summary}, with ${injectionName} injection dates marked` : summary} />
           </div>
           <div className="d-only">
-            <WeightChart chart={desk} frame={DESK_FRAME} desk summary={marked ? `${summary}, with ${injectionName} injection dates marked` : summary} />
+            <WeightChart chart={desk} frame={DESK_FRAME} desk mark={mark} summary={marked ? `${summary}, with ${injectionName} injection dates marked` : summary} />
           </div>
           <figcaption className="row gap-16 prov wt-legend" style={{ flexWrap: "wrap" }}>
             {hasClinic && (
               <span className="row gap-8">
                 <ClinicKey />
-                Clinic scale
+                Clinic scale, {count("clinic")}
               </span>
             )}
             {hasOther && (
               <span className="row gap-8">
                 <HomeKey />
-                {otherKey}
+                {otherKey}, {count("other")}
               </span>
             )}
             {marked && (
-              <span className="row gap-8 d-only">
+              <span className="row gap-8 ov">
                 <InjectionKey />
-                {injectionName} injection
+                {injectionName} given
               </span>
             )}
           </figcaption>
-        </figure>
+        </CycleFigure>
+        {(hasClinic && hasOther) || marked ? (
+          <p className="prov">
+            {hasClinic && hasOther && "Clinic and home scales are kept apart and never joined, as scales can differ. "}
+            {marked && `${injectionName} days are drawn on the dates recorded.`}
+          </p>
+        ) : null}
         <div className="m-only stack-16">
           <table className="tn" style={{ width: "100%", borderCollapse: "collapse" }}>
             <caption className="sr">Recent weights</caption>
@@ -437,22 +468,44 @@ function LabCard({
 
   const [latest, ...earlier] = reports;
   const rows = labRows(type, latest, pack);
+  const across = reports.length > 1;
   return (
     <section className="card lg stack-16" aria-label="Blood test results">
-      <div className="kicker m-only">
-        <span className="m-meas">Blood tests</span>
-        {chip}
-      </div>
-      <div className="row between" style={{ flexWrap: "wrap", gap: "8px 16px", alignItems: "baseline" }}>
-        <div className="stack-4">
-          <h2 className="r-h tn d-meas">Lab report, {formatDate(local(latest.taken_at).date)}</h2>
-          <p className="prov">{typedIn(latest, local, who)}</p>
-        </div>
-        <span className="d-only">{chip}</span>
-      </div>
-      <LabList rows={rows} />
-      <LabTable rows={rows} />
-      {latest.note && <p className="prov">Note: {latest.note}</p>}
+      {across ? (
+        <>
+          <div className="kicker">
+            <span className="m-meas">Blood tests</span>
+            <span className="chip chip-outline tn">{reports.length} lab reports</span>
+          </div>
+          <p className="prov">
+            Each result is drawn against the range printed on its own report. The band is the report&rsquo;s range; a hollow point sits
+            outside it.
+          </p>
+          <div className="stack-16">
+            {type.fields.map((f) => (
+              <LabMeasure key={f.key} field={f} reports={reports} local={local} />
+            ))}
+          </div>
+          <p className="prov">{typedInAll(reports, local, who)}</p>
+        </>
+      ) : (
+        <>
+          <div className="kicker m-only">
+            <span className="m-meas">Blood tests</span>
+            {chip}
+          </div>
+          <div className="row between" style={{ flexWrap: "wrap", gap: "8px 16px", alignItems: "baseline" }}>
+            <div className="stack-4">
+              <h2 className="r-h tn d-meas">Lab report, {formatDate(local(latest.taken_at).date)}</h2>
+              <p className="prov">{typedIn(latest, local, who)}</p>
+            </div>
+            <span className="d-only">{chip}</span>
+          </div>
+          <LabList rows={rows} />
+          <LabTable rows={rows} />
+          {latest.note && <p className="prov">Note: {latest.note}</p>}
+        </>
+      )}
       <div className="row between" style={{ flexWrap: "wrap", gap: "8px 16px" }}>
         <p className="prov">Your vet can explain what these results mean for {dogName}.</p>
         <div className="row gap-24" style={{ flexWrap: "wrap" }}>

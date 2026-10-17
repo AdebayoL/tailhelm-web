@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { Icon } from "@/app/_components/icon";
+import { Mark } from "@/app/_components/mark";
 import { SheetClose, SheetLink } from "@/app/_components/sheet-link";
 import { addDays, toLocal } from "@/engine/time";
 import { dayMonth, monthYear, weekdayDate } from "@/lib/app/dates";
@@ -12,6 +13,7 @@ import { requireOwner } from "@/lib/auth/session";
 import { hoursLines } from "@/lib/dogs/hours";
 import { type Dog, getMyDog } from "@/lib/dogs/queries";
 import { getMyName } from "@/lib/household/queries";
+import { myPlan, plusPayer } from "@/lib/plus/queries";
 import { describePlanItem, formatDate, planLine, planOptions, scheduleTimes } from "@/lib/plan/input";
 import { type PlanItem, getDogPlan } from "@/lib/plan/queries";
 import { getResults } from "@/lib/results/queries";
@@ -100,6 +102,9 @@ async function DogContent() {
           ))}
         </ul>
       </nav>
+      <Suspense fallback={null}>
+        <PlusCard dogId={dog.id} me={owner.userId} names={names} timeZone={timeZone} />
+      </Suspense>
       <div className="d-row">
         <section className="card lg stack-16" aria-label="Profile" style={{ flex: "5 1 380px" }}>
           <div className="kicker">
@@ -419,6 +424,54 @@ async function Account({ email, userId }: { email: string | null; userId: string
       </div>
       <hr className="hr" />
       <SignOutButton />
+    </section>
+  );
+}
+
+/**
+ * Tailhelm Plus, when the household has it: for the person who pays, until
+ * when and whether it renews; for everyone else, who pays, with no billing.
+ * Receipts, changing plan and the renewal switch come with payments.
+ */
+async function PlusCard({ dogId, me, names, timeZone }: { dogId: string; me: string; names: Record<string, string>; timeZone: string }) {
+  const payer = await plusPayer(dogId);
+  if (!payer) return null;
+  const head = (
+    <div className="plus-head">
+      <span className="plus-mark">
+        <Mark size={18} />
+        Tailhelm Plus
+      </span>
+      <span className="chip chip-rec">
+        <Icon name="tick" size={16} />
+        Active
+      </span>
+    </div>
+  );
+  const free = <p className="prov">Safety features are free on every plan.</p>;
+  if (payer !== me) {
+    const name = names[payer] ?? "someone in the household";
+    return (
+      <section className="card lg stack-16" aria-label="Tailhelm Plus">
+        {head}
+        <div className="stack-4">
+          <h2 className="r-h">Plus, paid by {name}</h2>
+          <p className="prov">Everything the household has recorded is on screen for everyone in it. Billing is only shown to {name}.</p>
+        </div>
+        {free}
+      </section>
+    );
+  }
+  const plan = await myPlan(me);
+  const ends = plan?.endsAt ? formatDate(toLocal(new Date(plan.endsAt), timeZone).date) : null;
+  return (
+    <section className="card lg stack-16" aria-label="Tailhelm Plus">
+      {head}
+      <h2 className="r-h tn">{ends ? (plan?.renews ? `Renews ${ends}` : `Plus until ${ends}`) : "Tailhelm Plus is active"}</h2>
+      <p className="prov">
+        {ends && !plan?.renews && "After that the account returns to the free plan, and nothing is deleted. "}
+        Only you see billing for Plus. Safety features are free on every plan.
+      </p>
     </section>
   );
 }

@@ -6,10 +6,23 @@ const label = { fill: "var(--text-2)", fontSize: 14 };
 
 /**
  * The weight chart as the design draws it: clinic weights joined, home weights
- * as lone diamonds, and on a desktop the injection days as dashed lines with
- * the latest clinic weight labelled.
+ * as lone diamonds, the injection days as dotted plum lines the owner can
+ * hide, and on a desktop the latest clinic weight labelled.
  */
-export function WeightChart({ chart, frame, desk, summary }: { chart: Chart; frame: Frame; desk: boolean; summary: string }) {
+export function WeightChart({
+  chart,
+  frame,
+  desk,
+  summary,
+  mark = null,
+}: {
+  chart: Chart;
+  frame: Frame;
+  desk: boolean;
+  summary: string;
+  /** The injection's two letters, such as "Zy", above each injection day. */
+  mark?: string | null;
+}) {
   const r = desk ? 5 : 4.5;
   const d = desk ? 7 : 6;
   return (
@@ -19,14 +32,22 @@ export function WeightChart({ chart, frame, desk, summary }: { chart: Chart; fra
       role="img"
       aria-label={summary}
       className="wt-chart"
-      style={{ display: "block", overflow: "visible", fontFamily: "inherit", maxWidth: desk ? undefined : 420 }}
+      style={{ display: "block", overflow: "visible", fontFamily: "inherit", maxWidth: desk ? undefined : 420, marginTop: mark && chart.marks.length > 0 ? 16 : 0 }}
     >
       <path style={grid} d={chart.gridlines.map((g) => `M${frame.x0 - 0.5} ${Math.floor(g.y) + 0.5}H${frame.x1}`).join("")} />
-      {desk && chart.marks.length > 0 && (
-        <path
-          style={{ ...axis, strokeDasharray: "3 4" }}
-          d={chart.marks.map((x) => `M${x} ${frame.yTop}V${frame.axis - 0.5}`).join("")}
-        />
+      {chart.marks.length > 0 && (
+        <g className="ov" aria-hidden="true">
+          <path className="ov-cycle" d={chart.marks.map((x) => `M${x} ${frame.yTop}V${frame.axis - 0.5}`).join("")} />
+          {mark && (
+            <g textAnchor="middle">
+              {chart.marks.map((x, i) => (
+                <text key={i} className="ov-cycle-lbl" x={x} y={frame.yTop - 6}>
+                  {mark}
+                </text>
+              ))}
+            </g>
+          )}
+        </g>
       )}
       <path style={axis} d={`M${frame.x0 - 0.5} ${frame.axis}H${frame.x1}`} />
       <path style={axis} d={chart.xTicks.map((t) => `M${t.x} ${frame.axis}v${desk ? 5 : 4}`).join("")} />
@@ -96,7 +117,7 @@ export function HomeKey() {
 export function InjectionKey() {
   return (
     <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
-      <path d="M7 0V14" style={{ stroke: "var(--line-control)", strokeWidth: 1.5, strokeDasharray: "3 3" }} />
+      <path className="ov-cycle" d="M7 0V14" style={{ strokeWidth: 1.5 }} />
     </svg>
   );
 }

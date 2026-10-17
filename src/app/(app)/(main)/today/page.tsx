@@ -21,11 +21,13 @@ import { type Countdown, type DoseSlot, buildToday, nextActionText } from "@/lib
 import { cycleCells, firstDoseOn } from "@/lib/today/view";
 import { discardDate, vialRule, vialWarning, vialWarningText } from "@/lib/treatments/vial";
 import { getPack } from "@/packs/registry";
+import { day31Waits } from "@/lib/plus/offer";
 import { CareRing } from "../../_components/care-ring";
 import { Page } from "../../_components/page";
 import { NoteForm } from "../trends/note-form";
 import { removeStressEvent, undoTick } from "./actions";
 import { DoseCard, type DoseView } from "./dose-card";
+import { Day31 } from "./day31";
 import { DoseList } from "./doses";
 import type { Vet } from "./guard-sheet";
 import { InjectionLog } from "./injection-log";
@@ -37,17 +39,17 @@ import { type InjectionStat, TodayStats } from "./today-stats";
 
 export const metadata: Metadata = { title: "Today · Tailhelm" };
 
-export default function TodayPage() {
+export default function TodayPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   return (
     <Suspense fallback={<main className="page" aria-busy="true" />}>
-      <TodayContent />
+      <TodayContent searchParams={searchParams} />
     </Suspense>
   );
 }
 
-async function TodayContent() {
+async function TodayContent({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   await requireSetup();
-  const [data, shell] = await Promise.all([getTodayData(), getShell()]);
+  const [data, shell, { preview }] = await Promise.all([getTodayData(), getShell(), searchParams]);
   if (!data) {
     return (
       <Page title="Today">
@@ -99,6 +101,7 @@ async function TodayContent() {
       myName={shell.me.name}
       today={today}
       conditionShort={short ?? null}
+      day31Preview={preview === "day-31"}
     />
   );
 }
@@ -110,6 +113,7 @@ async function TodayBoard({
   myName,
   today,
   conditionShort,
+  day31Preview,
 }: {
   data: TodayData & { plan: NonNullable<TodayData["plan"]> };
   shared: string;
@@ -117,6 +121,7 @@ async function TodayBoard({
   myName: string;
   today: ReturnType<typeof buildToday>;
   conditionShort: string | null;
+  day31Preview: boolean;
 }) {
   const { dog, plan, input } = data;
   const pack = getPack(plan.condition.condition_key);
@@ -443,6 +448,25 @@ async function TodayBoard({
           </section>
         )}
       </div>
+
+      <Suspense fallback={null}>
+        <Day31
+          dog={dog}
+          conditionIds={[plan.condition.id]}
+          medicines={plan.items.flatMap((i) =>
+            i.schedule_json.kind === "fixed" || i.schedule_json.kind === "interval"
+              ? [{ name: i.product ?? "Medicine", mark: i.schedule_json.kind === "fixed" ? ("pred" as const) : ("zyc" as const) }]
+              : [],
+          )}
+          me={input.me}
+          names={{ ...input.names, [input.me]: myName }}
+          timeZone={input.timeZone}
+          now={input.now}
+          today={today.date}
+          waits={day31Waits({ doses: today.doses, injections: today.countdowns, now: input.now, alert: Boolean(alert), happeningNow: false })}
+          preview={day31Preview}
+        />
+      </Suspense>
     </Page>
   );
 }

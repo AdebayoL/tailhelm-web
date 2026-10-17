@@ -2,6 +2,7 @@ import { timingSafeEqual } from "node:crypto";
 import * as Sentry from "@sentry/nextjs";
 import { runReminders } from "@/lib/reminders/run";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { cleanKey } from "@/lib/env/key";
 
 /**
  * The reminder scheduler. Supabase calls this every 5 minutes (pg_cron with
@@ -12,7 +13,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 export const maxDuration = 60;
 
 function authorised(request: Request): boolean {
-  const secret = process.env.CRON_SECRET?.trim();
+  const secret = cleanKey(process.env.CRON_SECRET);
   const given = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ?? "";
   if (!secret || secret.length < 32) return false;
   const a = Buffer.from(given);

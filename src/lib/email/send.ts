@@ -3,6 +3,7 @@ import { type Outcome, logOnce, logResult } from "@/lib/notify/log";
 import type { Notice } from "@/lib/reminders/due";
 import type { AdminClient } from "@/lib/supabase/admin";
 import { reminderEmail } from "./message";
+import { cleanKey } from "@/lib/env/key";
 
 /**
  * Reminder emails, sent through Resend from the reminders address. Replies go
@@ -14,7 +15,7 @@ export const REMINDERS_FROM = "Tailhelm <notifications@mail.tailhelm.com>";
 export const REPLY_TO = "hello@tailhelm.com";
 
 export function emailConfig(): EmailConfig | null {
-  const apiKey = process.env.RESEND_API_KEY?.trim();
+  const apiKey = cleanKey(process.env.RESEND_API_KEY);
   if (!apiKey) return null;
   return { apiKey, from: process.env.EMAIL_FROM?.trim() || REMINDERS_FROM, replyTo: REPLY_TO };
 }

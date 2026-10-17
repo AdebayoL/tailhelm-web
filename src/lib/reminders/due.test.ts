@@ -125,6 +125,17 @@ describe("dueNotices", () => {
     ]);
   });
 
+  it("finds a late-evening dose's reminders after midnight in the day before", () => {
+    const late = { id: "late", product: "Fludrocortisone", schedule_json: { kind: "fixed" as const, times: ["23:00"] } };
+    // 23:00 BST on 13 Oct; its 2-hour reminder is at 01:00 on 14 Oct.
+    const now = "2026-10-14T00:05:00Z";
+    expect(notices(now, { items: [late] })).toEqual([]);
+    expect(notices(now, { items: [late], date: "2026-10-13" }).map((n) => [n.kind, n.ref])).toEqual([
+      ["dose_not_ticked", "late:2026-10-13:23:00"],
+      ["dose_escalation", "late:2026-10-13:23:00"],
+    ]);
+  });
+
   it("never carries a dose or a banned word", () => {
     const all = [
       ...notices("2026-10-13T07:00:00Z"),

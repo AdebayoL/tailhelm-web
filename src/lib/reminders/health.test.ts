@@ -81,4 +81,15 @@ describe("healthIssues", () => {
     expect(all).toHaveLength(3);
     for (const i of all) expect(i.text).not.toMatch(BANNED);
   });
+
+  it("says when the monthly test went 2 days without being confirmed", () => {
+    const sent = { monthlyTestAt: "2026-10-15T09:00:00Z" };
+    expect(healthIssues(facts({ pushEverSent: true, pushPhones: 1, ...sent }), day)).toEqual([
+      { key: "test", text: "The monthly test notification sent on 2026-10-15 wasn’t confirmed." },
+    ]);
+    expect(healthIssues(facts({ pushEverSent: true, pushPhones: 1, ...sent, lastConfirmed: "2026-10-15T09:01:00Z" }), day)).toEqual([]);
+    expect(healthIssues(facts({ pushEverSent: true, pushPhones: 1, monthlyTestAt: "2026-10-16T09:00:00Z" }), day)).toEqual([]);
+    // With no phone left, that is what the banner says instead.
+    expect(healthIssues(facts({ pushEverSent: true, pushPhones: 0, ...sent }), day).map((i) => i.key)).toEqual(["push"]);
+  });
 });

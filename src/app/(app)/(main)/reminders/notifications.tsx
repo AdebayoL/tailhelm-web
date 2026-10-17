@@ -3,6 +3,7 @@
 import { useEffect, useState, useTransition } from "react";
 import { Icon } from "@/app/_components/icon";
 import { type PhoneState, phoneState, subscribePhone, subscriptionParts } from "@/lib/push/client";
+import { MONTHLY_TEST_URL } from "@/lib/reminders/watchdog";
 import { type TestState, confirmTest, savePhone, sendTestNotification } from "./actions";
 
 const TEST_WORDS: Record<NonNullable<TestState["outcome"]>, string> = {
@@ -13,9 +14,14 @@ const TEST_WORDS: Record<NonNullable<TestState["outcome"]>, string> = {
   not_set_up: "Notifications are not available yet.",
 };
 
+/** Whether this page was opened by tapping the monthly test notification. */
+const openedFromMonthlyTest = () => window.location.pathname + window.location.search === MONTHLY_TEST_URL;
+
 /**
  * Reminder health's notifications row: whether this phone gets notifications,
  * with the one step that turns them on and a test to prove they arrive.
+ * Opened from the monthly test notification, it records that the test
+ * reached this phone, because tapping it is the confirmation.
  */
 export function PhoneNotifications({
   publicKey,
@@ -34,6 +40,7 @@ export function PhoneNotifications({
   const [answer, setAnswer] = useState<"yes" | "no" | null>(null);
   const [problem, setProblem] = useState(false);
   const [test, setTest] = useState<TestState | null>(null);
+  const [monthly, setMonthly] = useState(false);
   const [pending, start] = useTransition();
 
   useEffect(() => {
@@ -42,6 +49,12 @@ export function PhoneNotifications({
       .then(async ({ state, subscription }) => {
         // A phone already subscribed is saved again, so it belongs to whoever is signed in now.
         if (subscription) await savePhone(subscriptionParts(subscription), navigator.userAgent);
+        if (subscription && openedFromMonthlyTest()) {
+          const recorded = await confirmTest(subscription.endpoint);
+          // Recorded once; reloading the page does not record it again.
+          window.history.replaceState(null, "", window.location.pathname);
+          if (live && recorded.ok) setMonthly(true);
+        }
         if (live) {
           setState(state);
           setEndpoint(subscription?.endpoint ?? null);
@@ -95,6 +108,7 @@ export function PhoneNotifications({
       detail: [
         lastSent ? `Last sent to your phones at ${lastSent}.` : "Each dose time, and 2 hours later if it isn’t ticked. If a dose someone else usually gives is still missed hours later, you’re told too.",
         lastTest ? `Last test received at ${lastTest}.` : "No test has been confirmed yet.",
+        "A test is sent each month; tap it to confirm it arrived.",
       ].join(" "),
     },
     off: {
@@ -148,6 +162,11 @@ export function PhoneNotifications({
           <button type="button" className="lnk" style={{ alignSelf: "flex-start" }} disabled={pending} onClick={sendTest}>
             Send a test
           </button>
+        )}
+        {monthly && (
+          <p role="status" className="ty-sm w6">
+            Monthly test received on this phone.
+          </p>
         )}
         {problem && (
           <p role="alert" className="ty-sm">

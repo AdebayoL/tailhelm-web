@@ -31,6 +31,17 @@ describe("reminderEmail", () => {
     expect(m.html).toContain("call your vet if a dose is missed");
   });
 
+  it("says why a reminder health email came, without the reminder email setting", () => {
+    const m = reminderEmail(
+      { ...notice, kind: "phone_lost", title: "Bella’s reminders can no longer reach your iPhone", url: "/reminders" },
+      "https://tailhelm.com",
+    );
+    expect(m.text).toContain("Tailhelm emails you when a reminder stops reaching you, even with reminder emails off.");
+    expect(m.text).not.toContain("You can turn them off");
+    expect(m.text).toContain(EMAIL_FOOTER);
+    expect(m.html).toContain('href="https://tailhelm.com/reminders"');
+  });
+
   it("escapes names typed by the owner", () => {
     const m = reminderEmail({ ...notice, title: "Rex <b>’s Pred & co" }, "https://tailhelm.com");
     expect(m.html).toContain("Rex &lt;b&gt;’s Pred &amp; co");

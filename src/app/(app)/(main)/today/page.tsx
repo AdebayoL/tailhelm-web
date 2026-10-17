@@ -8,6 +8,7 @@ import { dayMonth, longDate, weekdayDate, weekdayDayMonth } from "@/lib/app/date
 import { cycleView, jewelOf, tileLetters } from "@/lib/app/jewel";
 import { getShell } from "@/lib/app/shell";
 import { requireSetup } from "@/lib/setup/queries";
+import { getReminderIssues } from "@/lib/reminders/health-queries";
 import { initial } from "@/lib/app/words";
 import { telHref } from "@/lib/dogs/input";
 import { doseText, formatDate, planLine } from "@/lib/plan/input";
@@ -30,6 +31,7 @@ import type { Vet } from "./guard-sheet";
 import { InjectionLog } from "./injection-log";
 import { OfflineDay } from "./offline-day";
 import { QuickCheck } from "./quick-check";
+import { ReminderBanner } from "./reminder-banner";
 import { StressEventForm } from "./stress-event-form";
 import { type InjectionStat, TodayStats } from "./today-stats";
 
@@ -260,6 +262,10 @@ async function TodayBoard({
       }
     >
       <OfflineDay savedOn={today.date} timeZone={input.timeZone} doses={offlineDoses} shared={shared} />
+
+      <Suspense fallback={null}>
+        <RemindersCheck dogId={dog.id} dogName={dog.name} me={input.me} timeZone={input.timeZone} now={input.now} />
+      </Suspense>
 
       {overdue && (
         <OverdueCard countdown={overdue} item={itemOf(overdue.item.id)} data={data} today={today.date} who={who} vet={vet} />
@@ -718,4 +724,9 @@ function OverdueCard({
       </div>
     </section>
   );
+}
+
+/** The amber banner while a reminder layer has stopped working for the person signed in. */
+async function RemindersCheck(args: { dogId: string; dogName: string; me: string; timeZone: string; now: Date }) {
+  return <ReminderBanner issues={await getReminderIssues(args)} />;
 }

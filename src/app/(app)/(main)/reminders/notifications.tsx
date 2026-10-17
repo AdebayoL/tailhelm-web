@@ -3,7 +3,7 @@
 import { useEffect, useState, useTransition } from "react";
 import { Icon } from "@/app/_components/icon";
 import { type PhoneState, phoneState, subscribePhone, subscriptionParts } from "@/lib/push/client";
-import { type TestState, savePhone, sendTestNotification } from "./actions";
+import { type TestState, confirmTest, savePhone, sendTestNotification } from "./actions";
 
 const TEST_WORDS: Record<NonNullable<TestState["outcome"]>, string> = {
   sent: "Test sent. It should show on this phone within a minute.",
@@ -17,8 +17,21 @@ const TEST_WORDS: Record<NonNullable<TestState["outcome"]>, string> = {
  * Reminder health's notifications row: whether this phone gets notifications,
  * with the one step that turns them on and a test to prove they arrive.
  */
-export function PhoneNotifications({ publicKey, checkedAt, lastSent }: { publicKey: string; checkedAt: string; lastSent: string | null }) {
+export function PhoneNotifications({
+  publicKey,
+  checkedAt,
+  lastSent,
+  lastTest,
+}: {
+  publicKey: string;
+  checkedAt: string;
+  lastSent: string | null;
+  /** When someone last said a test arrived on one of their phones. */
+  lastTest: string | null;
+}) {
   const [state, setState] = useState<PhoneState | null>(null);
+  const [endpoint, setEndpoint] = useState<string | null>(null);
+  const [answer, setAnswer] = useState<"yes" | "no" | null>(null);
   const [problem, setProblem] = useState(false);
   const [test, setTest] = useState<TestState | null>(null);
   const [pending, start] = useTransition();
@@ -29,7 +42,10 @@ export function PhoneNotifications({ publicKey, checkedAt, lastSent }: { publicK
       .then(async ({ state, subscription }) => {
         // A phone already subscribed is saved again, so it belongs to whoever is signed in now.
         if (subscription) await savePhone(subscriptionParts(subscription), navigator.userAgent);
-        if (live) setState(state);
+        if (live) {
+          setState(state);
+          setEndpoint(subscription?.endpoint ?? null);
+        }
       })
       .catch(() => live && setState("unsupported"));
     return () => {
@@ -50,7 +66,10 @@ export function PhoneNotifications({ publicKey, checkedAt, lastSent }: { publicK
         }
         const saved = await savePhone(subscriptionParts(subscription), navigator.userAgent);
         if (!saved.ok) setProblem(true);
-        else setState("on");
+        else {
+          setState("on");
+          setEndpoint(subscription.endpoint);
+        }
       } catch (error) {
         console.error("[push] could not turn on", error);
         setProblem(true);
@@ -59,14 +78,24 @@ export function PhoneNotifications({ publicKey, checkedAt, lastSent }: { publicK
 
   const sendTest = () =>
     start(async () => {
+      setAnswer(null);
       setTest(await sendTestNotification());
+    });
+
+  const arrived = () =>
+    start(async () => {
+      if (endpoint) await confirmTest(endpoint);
+      setAnswer("yes");
     });
 
   const on = state === "on";
   const words: Record<PhoneState, { title: string; detail: string }> = {
     on: {
       title: "Notifications are on for this phone",
-      detail: lastSent ? `Last sent to your phones at ${lastSent}.` : "Each dose time, and 2 hours later if it isn’t ticked. If a dose someone else usually gives is still missed hours later, you’re told too.",
+      detail: [
+        lastSent ? `Last sent to your phones at ${lastSent}.` : "Each dose time, and 2 hours later if it isn’t ticked. If a dose someone else usually gives is still missed hours later, you’re told too.",
+        lastTest ? `Last test received at ${lastTest}.` : "No test has been confirmed yet.",
+      ].join(" "),
     },
     off: {
       title: "Notifications are off on this phone",
@@ -128,6 +157,22 @@ export function PhoneNotifications({ publicKey, checkedAt, lastSent }: { publicK
         {test?.outcome && (
           <p role="status" className="ty-sm">
             {TEST_WORDS[test.outcome]}
+          </p>
+        )}
+        {(test?.outcome === "sent" || test?.outcome === "already_sent") && answer === null && (
+          <div className="row gap-16" style={{ flexWrap: "wrap" }}>
+            <span className="ty-sm w6">Did it show on this phone?</span>
+            <button type="button" className="lnk ty-sm" style={{ minHeight: 0 }} disabled={pending} onClick={arrived}>
+              Yes, it arrived
+            </button>
+            <button type="button" className="lnk ty-sm" style={{ minHeight: 0 }} onClick={() => setAnswer("no")}>
+              No
+            </button>
+          </div>
+        )}
+        {answer === "no" && (
+          <p className="ty-sm">
+            Check that Focus or Do Not Disturb is off, and that notifications for Tailhelm are allowed in your phone’s Settings. Then send another.
           </p>
         )}
       </div>

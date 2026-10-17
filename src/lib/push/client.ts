@@ -19,6 +19,9 @@ const standalone = () =>
 /** An iPhone or iPad with Tailhelm open in the browser rather than from the Home Screen: no notifications reach it. */
 export const needsHomeScreen = () => isAppleMobile() && !standalone();
 
+/** Notifications blocked for Tailhelm on a phone, or in the Home Screen app. A computer's browser is left alone. */
+export const blockedHere = () => "Notification" in window && Notification.permission === "denied" && (standalone() || isPhone());
+
 /** Whether this is a phone or tablet rather than a computer, for the words. */
 export const isPhone = () => isAppleMobile() || /Android|Mobile/.test(navigator.userAgent);
 

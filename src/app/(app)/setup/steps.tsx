@@ -7,7 +7,7 @@ import { Icon } from "@/app/_components/icon";
 import { Mark } from "@/app/_components/mark";
 import { type PhoneState, isPhone, needsHomeScreen, phoneState, subscribePhone, subscriptionParts } from "@/lib/push/client";
 import { type SetupStep, nextStep, previousStep, stepHref, stepLabel } from "@/lib/setup/steps";
-import { type TestState, savePhone, sendTestNotification } from "../(main)/reminders/actions";
+import { type TestState, confirmTest, savePhone, sendTestNotification } from "../(main)/reminders/actions";
 
 const subscribe = () => () => {};
 
@@ -254,6 +254,8 @@ const SENT: Record<NonNullable<TestState["outcome"]>, string> = {
 /** Sends a test notification and asks whether it arrived. */
 export function TestStep() {
   const [on, setOn] = useState<boolean | null>(null);
+  const [endpoint, setEndpoint] = useState<string | null>(null);
+  const router = useRouter();
   const [test, setTest] = useState<TestState | null>(null);
   const [missed, setMissed] = useState(false);
   const [pending, start] = useTransition();
@@ -262,7 +264,11 @@ export function TestStep() {
   useEffect(() => {
     let live = true;
     phoneState()
-      .then(({ state }) => live && setOn(state === "on"))
+      .then(({ state, subscription }) => {
+        if (!live) return;
+        setOn(state === "on");
+        setEndpoint(subscription?.endpoint ?? null);
+      })
       .catch(() => live && setOn(false));
     return () => {
       live = false;
@@ -322,7 +328,20 @@ export function TestStep() {
         <>
           <p role="status">{SENT[test.outcome!]}</p>
           <p className="w6">Did it show on this {device}?</p>
-          <Continue step="test" label="Yes, it arrived" />
+          <button
+            type="button"
+            className={pending ? "btn btn-primary is-loading" : "btn btn-primary"}
+            disabled={pending}
+            onClick={() =>
+              start(async () => {
+                // Recorded for "Last test received" in Reminders.
+                if (endpoint) await confirmTest(endpoint);
+                router.push(stepHref("acknowledge"));
+              })
+            }
+          >
+            Yes, it arrived
+          </button>
           {!missed ? (
             <button type="button" className="btn btn-secondary" onClick={() => setMissed(true)}>
               No, it didn&rsquo;t

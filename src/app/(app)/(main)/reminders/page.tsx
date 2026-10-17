@@ -7,6 +7,7 @@ import { dayMonth } from "@/lib/app/dates";
 import { getShell } from "@/lib/app/shell";
 import { requireSetup } from "@/lib/setup/queries";
 import { formatDate } from "@/lib/plan/input";
+import { CALENDAR_STALE_MS } from "@/lib/reminders/health";
 import { reminderTimes } from "@/lib/reminders/times";
 import { createClient } from "@/lib/supabase/server";
 import { getTodayData } from "@/lib/today/queries";
@@ -58,7 +59,7 @@ async function Reminders() {
   const publicKey = vapidPublicKey();
   const emailReady = !!emailConfig();
   const owner = await requireOwner();
-  const [{ data: feedRows }, { data: lastSentRow }, { data: me }, { data: lastEmailRow }] = await Promise.all([
+  const [{ data: feedRows }, { data: lastSentRow }, { data: me }, { data: lastEmailRow }, { data: lastTestRow }] = await Promise.all([
     supabase.from("calendar_feeds").select("app, created_at, created_by, last_fetched_at").eq("dog_id", dog.id).is("revoked_at", null),
     supabase
       .from("notifications")
@@ -77,6 +78,13 @@ async function Reminders() {
       .order("sent_at", { ascending: false })
       .limit(1)
       .maybeSingle<{ sent_at: string }>(),
+    supabase
+      .from("push_subscriptions")
+      .select("last_test_ok_at")
+      .not("last_test_ok_at", "is", null)
+      .order("last_test_ok_at", { ascending: false })
+      .limit(1)
+      .maybeSingle<{ last_test_ok_at: string }>(),
   ]);
   const emailOn = me?.email_reminders ?? true;
   const feeds = (feedRows ?? []) as Feed[];
@@ -95,11 +103,13 @@ async function Reminders() {
     .sort()
     .at(-1);
   const checked = `${shell.at} today`;
+  // The same two days the banner on Today allows a calendar between fetches.
+  const fetchedLately = !!lastFetch && input.now.getTime() - Date.parse(lastFetch) < CALENDAR_STALE_MS;
 
   const health = (
     <ul>
       <li className="health-row">
-        {lastFetch ? (
+        {fetchedLately ? (
           <span className="health-ok">
             <Icon name="tick" />
           </span>
@@ -108,22 +118,37 @@ async function Reminders() {
             <Icon name="attention" />
           </span>
         )}
-        <div className={lastFetch ? undefined : "stack-4"}>
-          <p className={lastFetch ? undefined : "w6"}>
-            {lastFetch ? "Your calendar has the plan" : feeds.length > 0 ? "No calendar has fetched the plan yet" : "No calendar is set up"}
+        <div className={fetchedLately ? undefined : "stack-4"}>
+          <p className={fetchedLately ? undefined : "w6"}>
+            {fetchedLately
+              ? "Your calendar has the plan"
+              : lastFetch
+                ? "Your calendar has stopped fetching the plan"
+                : feeds.length > 0
+                  ? "No calendar has fetched the plan yet"
+                  : "No calendar is set up"}
           </p>
-          <p className={lastFetch ? "prov" : "ty-sm"}>
-            {lastFetch
-              ? `Last fetched at ${atText(lastFetch)}`
-              : feeds.length > 0
-                ? "Open the calendar app once so it subscribes, then check back here."
-                : `Add ${dog.name}'s plan to your calendar below, so its alarms remind you at each dose time.`}
+          <p className={fetchedLately ? "prov" : "ty-sm"}>
+            {fetchedLately
+              ? `Last fetched at ${atText(lastFetch!)}`
+              : lastFetch
+                ? `Last fetched at ${atText(lastFetch)}. Open your calendar app so it refreshes, or remove the link below and add it again.`
+                : feeds.length > 0
+                  ? "Open the calendar app once so it subscribes, then check back here."
+                  : `Add ${dog.name}'s plan to your calendar below, so its alarms remind you at each dose time.`}
           </p>
         </div>
         <span className="prov d-only">Checked {shell.at}</span>
       </li>
       <HomeScreenCheck checkedAt={shell.at} />
-      {publicKey && <PhoneNotifications publicKey={publicKey} checkedAt={shell.at} lastSent={lastSentRow ? atText(lastSentRow.sent_at) : null} />}
+      {publicKey && (
+        <PhoneNotifications
+          publicKey={publicKey}
+          checkedAt={shell.at}
+          lastSent={lastSentRow ? atText(lastSentRow.sent_at) : null}
+          lastTest={lastTestRow ? atText(lastTestRow.last_test_ok_at) : null}
+        />
+      )}
       {emailReady && me && (
         <li className="health-row">
           {emailOn ? (

@@ -61,6 +61,15 @@ select pg_temp.expect((select count(*)::text from public.push_subscriptions), '2
 select public.forget_push_subscription('https://push.example.com/phone-2');
 select pg_temp.expect((select count(*)::text from public.push_subscriptions), '1', 'Bob forgets his own phone when he signs out');
 
+-- A test that arrived is recorded on the phone it arrived on, by its own person only.
+select pg_temp.act_as(:alice);
+select public.confirm_push_test('https://push.example.com/phone-1');
+select pg_temp.act_as(:bob);
+select pg_temp.expect((select count(*)::text from public.push_subscriptions where last_test_ok_at is not null), '0', 'Alice cannot record a test on Bob''s phone');
+select public.confirm_push_test('https://push.example.com/phone-1');
+select pg_temp.expect((select count(*)::text from public.push_subscriptions where last_test_ok_at is not null), '1', 'Bob records that a test reached his phone');
+select pg_temp.expect_error($$update public.push_subscriptions set last_test_ok_at = now()$$, 'the time is recorded only through confirm_push_test');
+
 select pg_temp.act_as(null);
 select pg_temp.expect_error($$select public.save_push_subscription('https://push.example.com/y', 'k', 's', null)$$, 'a stranger cannot save a phone');
 reset role;

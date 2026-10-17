@@ -76,6 +76,17 @@ export async function forgetPhone(endpoint: string): Promise<void> {
   if (error) console.error("[push] forget failed", { code: error.code, message: error.message });
 }
 
+/** Records that a test notification reached this phone, for "Last test received". */
+export async function confirmTest(endpoint: string): Promise<{ ok: boolean }> {
+  await requireOwner();
+  if (typeof endpoint !== "string" || !/^https:\/\//.test(endpoint)) return { ok: false };
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("confirm_push_test", { endpoint });
+  if (error) console.error("[push] test record failed", { code: error.code, message: error.message });
+  refresh();
+  return { ok: !error };
+}
+
 /** Turns the signed-in person's reminder emails on or off. Only their own. */
 export async function setEmailReminders(form: FormData): Promise<void> {
   const owner = await requireOwner();

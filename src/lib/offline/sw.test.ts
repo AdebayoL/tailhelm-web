@@ -125,6 +125,7 @@ describe("service worker", () => {
     expect(nav(`${ORIGIN}/sign-in`)).toBeNull();
     expect(nav(`${ORIGIN}/calendar/abc`)).toBeNull();
     expect(nav(`${ORIGIN}/dog/export`)).toBeNull();
+    expect(nav(`${ORIGIN}/dog/summary`)).toBeNull();
     expect(nav(`${ORIGIN}/today`, "cors")).toBeNull();
     expect(nav(`${ORIGIN}/today`, "navigate", "POST")).toBeNull();
     expect(nav(`${ORIGIN}/todayx`)).toBeNull();

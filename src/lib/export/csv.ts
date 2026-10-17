@@ -47,6 +47,8 @@ export type ExportPlanItem = {
   set_by_vet_on: string | null;
   vet_instructions: string | null;
   active: boolean;
+  /** The plan item this one replaced, when the plan was changed. */
+  supersedes_id: string | null;
   created_at: string;
   created_by: string | null;
 };
@@ -85,6 +87,8 @@ export type ExportObservation = {
   days_since_anchor: number | null;
   note: string | null;
   recorded_by: string | null;
+  /** Weights only: the clinic's scale or a home one. */
+  scale: "clinic" | "home" | null;
 };
 
 export type ExportEvent = {

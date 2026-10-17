@@ -37,6 +37,7 @@ const data: ExportData = {
       set_by_vet_on: "2026-09-12",
       vet_instructions: null,
       active: true,
+      supersedes_id: null,
       created_at: "2026-09-12T10:00:00Z",
       created_by: "u1",
     },
@@ -70,6 +71,7 @@ const data: ExportData = {
       days_since_anchor: 10,
       note: null,
       recorded_by: "u1",
+      scale: null,
     },
     {
       dog_condition_id: "c1",
@@ -82,6 +84,7 @@ const data: ExportData = {
       days_since_anchor: null,
       note: null,
       recorded_by: "u1",
+      scale: null,
     },
     {
       dog_condition_id: "c1",
@@ -94,6 +97,7 @@ const data: ExportData = {
       days_since_anchor: null,
       note: null,
       recorded_by: "u1",
+      scale: null,
     },
   ],
   events: [{ dog_id: "d1", kind: "note", started_at: "2026-10-10T19:00:00Z", ended_at: null, note: "=HYPERLINK(\"x\")", recorded_by: "u2" }],

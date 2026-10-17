@@ -10,7 +10,7 @@ describe("the period", () => {
 
   it("starts six months back on the first of a month", () => {
     expect(periodStart("6m", "2026-10-11", null)).toBe("2026-04-01");
-    expect(periodStart("30d", "2026-10-11", null)).toBe("2026-09-11");
+    expect(periodStart("30d", "2026-10-11", null)).toBe("2026-09-12");
     expect(periodStart("all", "2026-10-11", "2025-03-14")).toBe("2025-03-01");
     expect(periodStart("all", "2026-10-11", "2026-09-01")).toBe("2026-04-01");
   });

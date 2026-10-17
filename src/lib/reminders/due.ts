@@ -1,9 +1,9 @@
 import { type LocalDate, type LocalTime, zonedTimeToInstant } from "@/engine/time";
 import { dayMonth } from "@/lib/app/dates";
-import { LATE_AFTER_MS, type Today, type TodayItem } from "@/lib/today/today";
+import { LATE_AFTER_MS, type Tick, type Today, type TodayItem } from "@/lib/today/today";
 
 /**
- * Which phone notifications are due for one dog, from its Today. Pure, so the
+ * Which reminders are due for one dog, from its Today. Pure, so the
  * wording and timing are tested without a database or a phone.
  *
  * Notifications carry medicine names, times and dates, never a dose, and the
@@ -16,21 +16,24 @@ export const CATCH_UP_MS = 60 * 60 * 1000;
 export const INJECTION_NOTICE_DAYS = [7, 2] as const;
 /** A dose still not ticked by this time on the owner's clock gets one more email (spec: 21:00). */
 export const EVENING: LocalTime = "21:00";
+/** A dose still not ticked this long after its time, or at EVENING if sooner, is passed to another person in the household (spec: reminder layer 4). */
+export const ESCALATE_AFTER_MS = 4 * 60 * 60 * 1000;
 
 export type NoticeKind =
   | "test"
   | "dose_due"
   | "dose_not_ticked"
   | "dose_evening"
+  | "dose_escalation"
   | "dose_ticked"
   | "injection_soon"
   | "injection_overdue"
   | "test_due";
 
 /** What reaches a phone. The 21:00 message is email only, because the 2-hour notification already reached the phone. */
-export const PUSH_KINDS: ReadonlySet<NoticeKind> = new Set(["test", "dose_due", "dose_not_ticked", "dose_ticked", "injection_soon", "injection_overdue", "test_due"]);
+export const PUSH_KINDS: ReadonlySet<NoticeKind> = new Set(["test", "dose_due", "dose_not_ticked", "dose_escalation", "dose_ticked", "injection_soon", "injection_overdue", "test_due"]);
 /** What is also emailed, as a net under the phone (spec: reminder layer 3). */
-export const EMAIL_KINDS: ReadonlySet<NoticeKind> = new Set(["dose_not_ticked", "dose_evening", "injection_soon", "injection_overdue"]);
+export const EMAIL_KINDS: ReadonlySet<NoticeKind> = new Set(["dose_not_ticked", "dose_evening", "dose_escalation", "injection_soon", "injection_overdue"]);
 
 export type Notice = {
   kind: NoticeKind;
@@ -42,6 +45,8 @@ export type Notice = {
   body: string;
   url: string;
   at: Date;
+  /** Set on an escalation: the dose it is about, so the scheduler can leave out the person who usually gives it. */
+  escalates?: { itemId: string; slot: LocalTime };
 };
 
 const owned = (dogName: string, item: TodayItem, fallback: string) => `${dogName}’s ${item.product ?? fallback}`;
@@ -84,6 +89,22 @@ export function dueNotices(today: Today, dogName: string, timeZone: string, now:
         at: evening,
       });
     }
+    // Escalation changes person: at +4 hours or 21:00, whichever is sooner, but
+    // never before the 2-hour reminder has had its chance.
+    const escalateAt = Math.max(
+      Math.min(dose.dueAt.getTime() + ESCALATE_AFTER_MS, evening.getTime()),
+      dose.dueAt.getTime() + LATE_AFTER_MS,
+    );
+    add({
+      kind: "dose_escalation",
+      ref,
+      tag,
+      title: `${what} wasn’t logged today`,
+      body: `It was due at ${dose.slot}. If it was missed, contact your vet.`,
+      url: "/today",
+      at: new Date(escalateAt),
+      escalates: { itemId: dose.item.id, slot: dose.slot },
+    });
   }
 
   for (const c of today.countdowns) {
@@ -152,4 +173,27 @@ export function tickedNotice(args: {
     url: "/today",
     at: now,
   };
+}
+
+/** How far back the scheduler looks to see who usually gives a dose. */
+export const USUAL_GIVER_DAYS = 14;
+
+/**
+ * Who usually gives this dose: whoever ticked it most over the ticks given,
+ * the most recent winning a tie. With no ticks to go on, the dog's owner. An
+ * escalation goes to everyone else in the household.
+ */
+export function usualGiver(ticks: Tick[], itemId: string, slot: string, owner: string | null): string | null {
+  const counts = new Map<string, { n: number; last: string }>();
+  for (const t of ticks) {
+    if (t.plan_item_id !== itemId || t.slot !== slot || !t.given_by_profile) continue;
+    const c = counts.get(t.given_by_profile) ?? { n: 0, last: "" };
+    counts.set(t.given_by_profile, { n: c.n + 1, last: t.given_at > c.last ? t.given_at : c.last });
+  }
+  let best: string | null = null;
+  let top = { n: 0, last: "" };
+  for (const [who, c] of counts) {
+    if (c.n > top.n || (c.n === top.n && c.last > top.last)) [best, top] = [who, c];
+  }
+  return best ?? owner;
 }

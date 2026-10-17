@@ -162,6 +162,19 @@ const PATHS = {
       <path d="M12 8.5v7M8.5 12h7" />
     </>
   ),
+  check: (
+    <>
+      <rect x="4.5" y="4.5" width="15" height="15" rx="3" />
+      <path d="M8.5 12.3l2.4 2.4 4.6-4.8" />
+    </>
+  ),
+  note: (
+    <>
+      <path d="M6 4.5h9l4 4v11H6z" />
+      <path d="M15 4.5v4h4" />
+      <path d="M9 12h6M9 15.5h6" />
+    </>
+  ),
   open: <path d="M9.5 6l6 6-6 6" />,
   back: <path d="M14.5 6l-6 6 6 6" />,
   close: <path d="M6.5 6.5l11 11M17.5 6.5l-11 11" />,

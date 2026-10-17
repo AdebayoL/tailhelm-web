@@ -15,10 +15,12 @@ export type Dog = {
   out_of_hours_name: string | null;
   vet_hours: Hours | null;
   out_of_hours_hours: Hours | null;
+  /** When the dog was added to Tailhelm. */
+  created_at: string;
 };
 
 const COLUMNS =
-  "id, name, vet_name, vet_phone, out_of_hours_phone, vet_email, breed, date_of_birth, out_of_hours_name, vet_hours, out_of_hours_hours";
+  "id, name, vet_name, vet_phone, out_of_hours_phone, vet_email, breed, date_of_birth, out_of_hours_name, vet_hours, out_of_hours_hours, created_at";
 
 /**
  * The signed-in person's first dog, or null. Row-level security returns only

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DESK_FRAME, PHONE_FRAME, dateTicks, parsePeriod, periodStart, periodText, rangeBar, spanText, weightChart, weightScale } from "./chart";
+import { DESK_FRAME, LAB_CHART_MAX, PHONE_FRAME, dateTicks, labChart, parsePeriod, periodStart, periodText, rangeBar, spanText, weightChart, weightScale } from "./chart";
 
 describe("the period", () => {
   it("defaults to six months", () => {
@@ -85,5 +85,35 @@ describe("rangeBar", () => {
   it("keeps a value far outside the range on the bar", () => {
     expect(rangeBar(1000, { low: 1, high: 2 }).mark).toBe(99);
     expect(rangeBar(0, { low: 100, high: 200 }).mark).toBe(1);
+  });
+});
+
+describe("labChart", () => {
+  const points = [
+    { on: "2026-09-22", value: 10.2, range: { low: 2.5, high: 9.6 } },
+    { on: "2026-04-14", value: 9.1, range: { low: 2.5, high: 9.6 } },
+    { on: "2026-06-30", value: 9.8, range: null },
+  ];
+
+  it("puts each report in date order over its own range, hollow when outside it", () => {
+    const chart = labChart(points);
+    expect(chart.slots.map((s) => [s.date, s.value, s.outside, s.band !== null])).toEqual([
+      ["14 Apr", "9.1", false, true],
+      ["30 Jun", "9.8", false, false],
+      ["22 Sep", "10.2", true, true],
+    ]);
+    const [first, , last] = chart.slots;
+    // Higher values sit higher, and a point outside its band sits beyond it.
+    expect(last.y).toBeLessThan(first.y);
+    expect(last.y).toBeLessThan(last.band!.y);
+    expect(first.y).toBeGreaterThan(first.band!.y);
+    expect(first.y).toBeLessThan(first.band!.y + first.band!.height);
+  });
+
+  it("keeps the latest reports when there are more than fit, and labels alternate dates", () => {
+    const many = Array.from({ length: 8 }, (_, i) => ({ on: `2026-0${i + 1}-15`, value: 140 + i, range: { low: 139, high: 154 } }));
+    const chart = labChart(many);
+    expect(chart.slots).toHaveLength(LAB_CHART_MAX);
+    expect(chart.slots.map((s) => s.date)).toEqual([null, "15 Apr", null, "15 Jun", null, "15 Aug"]);
   });
 });

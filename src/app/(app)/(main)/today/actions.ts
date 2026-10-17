@@ -404,3 +404,14 @@ export async function removeStressEvent(form: FormData): Promise<void> {
     });
   refresh();
 }
+
+/**
+ * Closes the day-31 sheet for the signed-in person, for good: "Not now",
+ * "Close" or "Choose Plus". Nobody else in the household is affected.
+ */
+export async function markDay31Seen(dogId: string): Promise<void> {
+  await requireOwner();
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("mark_day31_seen", { dog: dogId });
+  if (error) console.error("[today] day-31 sheet not marked as seen", { code: error.code, message: error.message });
+}

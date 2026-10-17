@@ -151,3 +151,52 @@ export function rangeBar(value: number, range: Range): { band: { left: number; w
   const at = left + ((value - range.low) / (range.high - range.low)) * width;
   return { band: { left, width }, mark: Math.round(Math.min(99, Math.max(1, at)) * 10) / 10 };
 }
+
+export type LabPoint = { on: LocalDate; value: number; range: Range | null };
+
+export type LabChart = {
+  width: number;
+  height: number;
+  /** The baseline the report dates sit under. */
+  axis: number;
+  x0: number;
+  x1: number;
+  /** One slot a report, oldest first: the band is that report's own range. */
+  slots: { x: number; y: number; value: string; band: { y: number; height: number } | null; outside: boolean; date: string | null }[];
+};
+
+/** The most reports one small chart holds; every report is still listed beneath it. */
+export const LAB_CHART_MAX = 6;
+
+/**
+ * One lab measure across reports: each value as a point, over a band for the
+ * range printed on that report. A point outside its own band is drawn hollow.
+ * Nothing is compared with any range but the report's own.
+ */
+export function labChart(points: LabPoint[]): LabChart {
+  const shown = [...points].sort((a, b) => (a.on < b.on ? -1 : a.on > b.on ? 1 : 0)).slice(-LAB_CHART_MAX);
+  const frame = { width: 310, height: 96, x0: 44, x1: 302, top: 12, bottom: 62, axis: 70.5 };
+  const ends = shown.flatMap((p) => [p.value, ...(p.range ? [p.range.low, p.range.high] : [])]);
+  const lo = Math.min(...ends);
+  const hi = Math.max(...ends);
+  const pad = hi > lo ? (hi - lo) * 0.12 : Math.max(1, Math.abs(hi) * 0.1);
+  const y = (v: number) => r1(frame.bottom - ((v - (lo - pad)) / (hi - lo + 2 * pad)) * (frame.bottom - frame.top));
+  const slot = (frame.x1 - frame.x0) / Math.max(1, shown.length);
+  // Dates need about 56 px each; with more reports than fit, every other one is labelled, always the latest.
+  const every = slot >= 56 ? 1 : 2;
+  return {
+    width: frame.width,
+    height: frame.height,
+    axis: frame.axis,
+    x0: frame.x0,
+    x1: frame.x1,
+    slots: shown.map((p, i) => ({
+      x: r1(frame.x0 + slot * (i + 0.5)),
+      y: y(p.value),
+      value: String(Number(p.value.toFixed(3))),
+      band: p.range ? { y: y(p.range.high), height: r1(y(p.range.low) - y(p.range.high)) } : null,
+      outside: p.range !== null && (p.value < p.range.low || p.value > p.range.high),
+      date: (shown.length - 1 - i) % every === 0 ? dayMonth(p.on) : null,
+    })),
+  };
+}

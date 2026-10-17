@@ -137,7 +137,7 @@ async function Reminders() {
             <p className={emailOn ? undefined : "w6"}>{emailOn ? "Email reminders are on" : "Email reminders are off"}</p>
             <p className={emailOn ? "prov" : "ty-sm"}>
               {emailOn
-                ? `To ${me.email}, if a dose isn’t ticked 2 hours after its time and again at 21:00, and before each injection.${lastEmailRow ? ` Last sent at ${atText(lastEmailRow.sent_at)}.` : ""}`
+                ? `To ${me.email}, if a dose isn’t ticked 2 hours after its time and again at 21:00, and before each injection. If a dose someone else usually gives is still missed hours later, you’re told too.${lastEmailRow ? ` Last sent at ${atText(lastEmailRow.sent_at)}.` : ""}`
                 : "Turn them on as a backup, in case a phone notification doesn’t arrive."}
             </p>
             <form action={setEmailReminders}>

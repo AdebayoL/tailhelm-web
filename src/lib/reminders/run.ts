@@ -7,7 +7,7 @@ import { pushConfig } from "@/lib/push/config";
 import { deliver } from "@/lib/push/send";
 import type { AdminClient } from "@/lib/supabase/admin";
 import { type Tick, type TodayItem, buildToday } from "@/lib/today/today";
-import { EMAIL_KINDS, PUSH_KINDS, type Notice, dueNotices } from "./due";
+import { EMAIL_KINDS, PUSH_KINDS, USUAL_GIVER_DAYS, type Notice, dueNotices, usualGiver } from "./due";
 
 type Counts = Partial<Record<Outcome, number>>;
 export type RunSummary = { dogs: number; notices: number; push: Counts; email: Counts };
@@ -20,7 +20,8 @@ type Item = { id: string; product: string | null; schedule_json: unknown; dog_co
  * One scheduler run: for every active dog with someone a reminder can reach,
  * work out what is due now on the owner's clock and send it to each person in
  * the household, by notification on their phones and, for the reminders the
- * spec emails, by email. Safe to run as often as wanted, because each
+ * spec emails, by email. A dose still missed hours later is passed to the
+ * rest of the household (reminder layer 4). Safe to run as often as wanted, because each
  * reminder is logged and sent once per person per channel.
  */
 export async function runReminders(admin: AdminClient, now: Date, appUrl: string): Promise<RunSummary> {
@@ -93,7 +94,7 @@ export async function runReminders(admin: AdminClient, now: Date, appUrl: string
         .from("treatments")
         .select("id, plan_item_id, given_on, slot, extra_no, given_at, given_by_profile")
         .in("plan_item_id", itemIds)
-        .gte("given_on", addDays(utcToday, -2))
+        .gte("given_on", addDays(utcToday, -USUAL_GIVER_DAYS))
         .lte("given_on", addDays(utcToday, 2))
     : { data: [], error: null };
   if (ticks.error) throw new Error(`Could not load ticks: ${ticks.error.message}`);
@@ -124,8 +125,14 @@ export async function runReminders(admin: AdminClient, now: Date, appUrl: string
         names: {},
       });
       for (const notice of dueNotices(today, dog.name, timeZone, now)) {
+        // An escalation goes to the rest of the household, not the person who usually gives the dose.
+        const giver = notice.escalates
+          ? usualGiver((ticks.data ?? []) as Tick[], notice.escalates.itemId, notice.escalates.slot, owner?.profile_id ?? null)
+          : null;
+        const to = notice.escalates ? people.filter((p) => p !== giver) : people;
+        if (to.length === 0) continue;
         summary.notices++;
-        for (const person of people) await send(person, dog.id, notice);
+        for (const person of to) await send(person, dog.id, notice);
       }
     }
   }

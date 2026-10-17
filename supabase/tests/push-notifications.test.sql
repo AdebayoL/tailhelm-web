@@ -91,6 +91,10 @@ insert into public.notifications (profile_id, kind, ref, channel, title, schedul
   values (:alice, 'dose_evening', 'item:2026-10-13:08:00', 'email', 'Bella''s Prednisolone still isn''t ticked today', now());
 select pg_temp.expect_error($$insert into public.notifications (profile_id, kind, ref, channel, title, scheduled_for)
   values ('a0000000-0000-0000-0000-000000000001', 'dose_evening', 'item:2026-10-13:08:00', 'email', 'again', now())$$, 'the same email is never logged twice');
+insert into public.notifications (profile_id, kind, ref, channel, title, scheduled_for)
+  values (:alice, 'dose_escalation', 'item:2026-10-13:08:00', 'push', 'Bella''s Prednisolone wasn''t logged today', now());
+select pg_temp.expect_error($$insert into public.notifications (profile_id, kind, ref, channel, title, scheduled_for)
+  values ('a0000000-0000-0000-0000-000000000001', 'dose_escalation', 'item:2026-10-13:08:00', 'push', 'again', now())$$, 'an escalation is never logged twice');
 select pg_temp.expect_error($$insert into public.notifications (profile_id, kind, ref, channel, title, scheduled_for)
   values ('a0000000-0000-0000-0000-000000000001', 'test', 'y', 'sms', 'x', now())$$, 'only push and email are channels');
 reset role;

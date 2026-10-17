@@ -66,7 +66,7 @@ export function PhoneNotifications({ publicKey, checkedAt, lastSent }: { publicK
   const words: Record<PhoneState, { title: string; detail: string }> = {
     on: {
       title: "Notifications are on for this phone",
-      detail: lastSent ? `Last sent to your phones at ${lastSent}.` : "Each dose time, and 2 hours later if it isn’t ticked.",
+      detail: lastSent ? `Last sent to your phones at ${lastSent}.` : "Each dose time, and 2 hours later if it isn’t ticked. If a dose someone else usually gives is still missed hours later, you’re told too.",
     },
     off: {
       title: "Notifications are off on this phone",

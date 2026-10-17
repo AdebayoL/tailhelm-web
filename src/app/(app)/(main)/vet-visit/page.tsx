@@ -6,6 +6,7 @@ import { type LocalDate, addDays, toLocal } from "@/engine/time";
 import { dayMonth, monthYear, weekdayDate } from "@/lib/app/dates";
 import { jewelClass } from "@/lib/app/jewel";
 import { getShell } from "@/lib/app/shell";
+import { requireSetup } from "@/lib/setup/queries";
 import { joinNames } from "@/lib/app/words";
 import { telHref } from "@/lib/dogs/input";
 import type { Dog } from "@/lib/dogs/queries";
@@ -55,6 +56,7 @@ function weekday(date: LocalDate) {
 }
 
 async function VetVisit() {
+  await requireSetup();
   const [data, shell] = await Promise.all([getTodayData(), getShell()]);
   if (!data?.plan) {
     return (

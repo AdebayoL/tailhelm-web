@@ -7,6 +7,7 @@ import { type LocalDate, toLocal } from "@/engine/time";
 import { dayMonth, weekdayDayMonth } from "@/lib/app/dates";
 import { initial } from "@/lib/app/words";
 import { requireOwner } from "@/lib/auth/session";
+import { requireSetup } from "@/lib/setup/queries";
 import { type Dog, getMyDog } from "@/lib/dogs/queries";
 import { HOUSEHOLD_SIZE, INVITATION_DAYS, type Member, type PastInvitation, careTeam, invitationExpires, placesLeft } from "@/lib/household/input";
 import { type Invitation, getHouseholdHistory, getLastRecorded, getMyInvitations } from "@/lib/household/queries";
@@ -30,6 +31,7 @@ const PAST_OUTCOME = { declined: "Declined", expired: "Expired", cancelled: "Can
 
 async function CareTeamContent() {
   const owner = await requireOwner();
+  await requireSetup();
   const [dog, invitations, timeZone] = await Promise.all([getMyDog(), getMyInvitations(), getTimeZone(owner.userId)]);
   const now = new Date();
   const local = (iso: string) => toLocal(new Date(iso), timeZone);

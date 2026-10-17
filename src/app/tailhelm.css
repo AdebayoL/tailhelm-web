@@ -1254,3 +1254,20 @@
 @layer utilities {
   .gap-8 { gap: 8px; } .gap-12 { gap: 12px; } .gap-16 { gap: 16px; } .gap-20 { gap: 20px; } .gap-24 { gap: 24px; }
 }
+
+/* ---------- Setup ---------- */
+@layer components {
+  .setup .auth-main { padding-top: 32px; }
+  .setup-how { display: flex; flex-direction: column; gap: 16px; counter-reset: how; }
+  .setup-how li { display: grid; grid-template-columns: 56px minmax(0, 1fr); column-gap: 16px; align-items: center; font-size: 16px; line-height: 24px; }
+  .setup-how b { font-weight: 600; }
+  .setup-glyph { width: 56px; height: 56px; border-radius: 14px; display: grid; place-items: center; background: var(--panel); color: var(--action-2); }
+  .setup-add { font-size: 16px; font-weight: 600; }
+  .setup-app { background: #17324D; color: #FFFFFF; } /* the Home Screen icon, navy in both themes */
+  .setup-app .mark { fill: currentColor; }
+  .setup-done { display: flex; align-items: center; gap: 8px; font-size: 16px; line-height: 24px; color: var(--recorded-text); }
+  .setup-done .ic { color: var(--recorded); }
+  .setup .check { border-top: 0; }
+  .setup .check:has(input:checked) .box { background: var(--recorded); box-shadow: none; }
+  .setup .check:has(input:checked) .box .ic { display: block; }
+}

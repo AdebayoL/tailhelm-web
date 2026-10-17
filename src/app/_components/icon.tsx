@@ -148,6 +148,20 @@ const PATHS = {
     </>
   ),
   add: <path d="M12 5v14M5 12h14" />,
+  /** The Share button in Safari and Chrome on iPhone. */
+  share: (
+    <>
+      <path d="M12 3.5v11M8 7l4-3.5L16 7" />
+      <path d="M8.5 10.5H7a2 2 0 0 0-2 2V19a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6.5a2 2 0 0 0-2-2h-1.5" />
+    </>
+  ),
+  /** Add to Home Screen in the iPhone's share sheet. */
+  addSquare: (
+    <>
+      <rect x="4" y="4" width="16" height="16" rx="3.5" />
+      <path d="M12 8.5v7M8.5 12h7" />
+    </>
+  ),
   open: <path d="M9.5 6l6 6-6 6" />,
   back: <path d="M14.5 6l-6 6 6 6" />,
   close: <path d="M6.5 6.5l11 11M17.5 6.5l-11 11" />,

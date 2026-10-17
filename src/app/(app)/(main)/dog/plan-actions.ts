@@ -1,8 +1,10 @@
 "use server";
 
 import { refresh } from "next/cache";
+import { after } from "next/server";
 import { requireOwner } from "@/lib/auth/session";
 import { type FieldErrors, parseConditionForm, parsePlanItemForm } from "@/lib/plan/input";
+import { tellHouseholdOfPlanChange } from "@/lib/push/household";
 import { getPack } from "@/packs/registry";
 import { createClient } from "@/lib/supabase/server";
 
@@ -51,7 +53,7 @@ export async function addCondition(_state: PlanFormState, form: FormData): Promi
  * so the history of what the vet set is never overwritten.
  */
 export async function addPlanItem(_state: PlanFormState, form: FormData): Promise<PlanFormState> {
-  await requireOwner();
+  const owner = await requireOwner();
   const supabase = await createClient();
   const conditionId = String(form.get("dog_condition_id") ?? "");
   const { data: condition, error: conditionError } = await supabase
@@ -68,33 +70,39 @@ export async function addPlanItem(_state: PlanFormState, form: FormData): Promis
   if (!parsed.ok) return { errors: parsed.errors, ...typed(form) };
 
   const supersedes = String(form.get("supersedes_id") ?? "") || null;
-  const { error } = await supabase
+  const { data: added, error } = await supabase
     .from("plan_items")
-    .insert({ ...parsed.value, dog_condition_id: condition.id, supersedes_id: supersedes });
+    .insert({ ...parsed.value, dog_condition_id: condition.id, supersedes_id: supersedes })
+    .select("id")
+    .single<{ id: string }>();
   if (error) {
     console.error("[plan] add item failed", { code: error.code, message: error.message });
     return { failed: true, ...typed(form) };
   }
+  let replaced = false;
   if (supersedes) {
-    const { error: retireError } = await supabase
+    const { data: retired, error: retireError } = await supabase
       .from("plan_items")
       .update({ active: false })
       .eq("id", supersedes)
-      .eq("dog_condition_id", condition.id);
+      .eq("dog_condition_id", condition.id)
+      .select("id");
     if (retireError) console.error("[plan] retire superseded failed", { code: retireError.code, message: retireError.message });
+    replaced = (retired ?? []).length > 0;
   }
+  after(() => tellHouseholdOfPlanChange({ itemId: added.id, wasId: replaced ? supersedes : null, removed: false, by: owner.userId }));
   refresh();
   return { savedAt: Date.now() };
 }
 
 /** Takes a medicine off the plan. The row stays, so its history is kept. */
 export async function retirePlanItem(form: FormData): Promise<void> {
-  await requireOwner();
+  const owner = await requireOwner();
   const supabase = await createClient();
-  const { error } = await supabase
-    .from("plan_items")
-    .update({ active: false })
-    .eq("id", String(form.get("plan_item_id") ?? ""));
+  const id = String(form.get("plan_item_id") ?? "");
+  const { data: retired, error } = await supabase.from("plan_items").update({ active: false }).eq("id", id).eq("active", true).select("id");
   if (error) console.error("[plan] retire failed", { code: error.code, message: error.message });
+  // Only a medicine that was on the plan until now is news to the household.
+  if ((retired ?? []).length > 0) after(() => tellHouseholdOfPlanChange({ itemId: id, wasId: null, removed: true, by: owner.userId }));
   refresh();
 }

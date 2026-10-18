@@ -14,8 +14,10 @@ const source = readFileSync(fileURLToPath(new URL("../../../public/sw.js", impor
 
 class FakeCache {
   entries = new Map<string, Response>();
-  async match(key: string | Request) {
-    const r = this.entries.get(typeof key === "string" ? key : key.url);
+  async match(key: string | Request, options: { ignoreSearch?: boolean } = {}) {
+    const url = typeof key === "string" ? key : key.url;
+    const bare = (u: string) => u.split("?")[0];
+    const r = options.ignoreSearch ? [...this.entries].find(([k]) => bare(k) === bare(url))?.[1] : this.entries.get(url);
     return r?.clone();
   }
   async put(key: string | Request, r: Response) {
@@ -150,6 +152,13 @@ describe("service worker", () => {
     expect(await (await sw.navigate("/trends"))!.text()).toBe("today then");
   });
 
+  it("opens Happening now with no signal from its start link, using the copy fetched ahead", async () => {
+    served["/happening-now"] = () => page("timer");
+    await sw.message("warm");
+    online = false;
+    expect(await (await sw.navigate("/happening-now?start=1"))!.text()).toBe("timer");
+  });
+
   it("deletes every kept page when a page redirects to sign-in", async () => {
     served["/today"] = () => page("today then");
     await sw.navigate("/today");
@@ -166,7 +175,7 @@ describe("service worker", () => {
     expect(await sw.caches.keys()).not.toContain("tailhelm-pages-v1");
   });
 
-  it("fetches Today, the emergency card and vet visit ahead, but not when signed out", async () => {
+  it("fetches Today, the emergency card, Happening now and vet visit ahead, but not when signed out", async () => {
     const fetched: string[] = [];
     served["/today"] = () => (fetched.push("today"), page("today"));
     served["/emergency"] = () => (fetched.push("emergency"), page("emergency"));

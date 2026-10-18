@@ -1,0 +1,314 @@
+"use client";
+
+import Link from "next/link";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { Icon } from "@/app/_components/icon";
+import { toLocal } from "@/engine/time";
+import { formatDate } from "@/lib/plan/input";
+import { useClock, useKeptCaptures, useOnline } from "@/lib/happening/hooks";
+import { type LocalCapture, forgetCapture, readCaptures, runningIn, startCapture, stopCapture } from "@/lib/happening/local";
+import { finishedAs, sendCapture } from "@/lib/happening/sync";
+import { type LiveThreshold, clockText, lastedText, passedThresholds, spokenTime } from "@/lib/happening/timer";
+import { checkCapture } from "./actions";
+
+export type TimerData = {
+  dogId: string;
+  dogName: string;
+  timeZone: string;
+  /** The vet's numbers, in the order Emergency shows them. */
+  calls: { title: string; sub: string | null; phone: string; href: string }[];
+  why: string | null;
+  thresholds: LiveThreshold[];
+  /** The capture Tailhelm has running for the dog, and who started it (null for the person signed in). */
+  running: { id: string; startedAt: string; by: string | null } | null;
+  /** The vet's written emergency plan, exactly as entered. */
+  plan: { words: string; provenance: string } | null;
+};
+
+type Current = { id: string; dogId: string; startedAt: string; by: string | null };
+type Stopped = { id: string; startedAt: string; endedAt: string; status: "sending" | "saved" | "waiting" | "removed"; elsewhere: boolean };
+
+/** How often a running timer checks whether another phone stopped it. */
+const CHECK_MS = 15_000;
+
+const noChange = () => () => {};
+
+/*
+ * What "It has stopped" showed, kept outside the component so it survives the
+ * page swapping its loading copy of the timer for the full one.
+ */
+let stoppedNow: Stopped | null = null;
+const stoppedListeners = new Set<() => void>();
+function setStoppedNow(next: Stopped | null | ((prev: Stopped | null) => Stopped | null)) {
+  stoppedNow = typeof next === "function" ? next(stoppedNow) : next;
+  for (const l of stoppedListeners) l();
+}
+function subscribeStopped(onChange: () => void) {
+  stoppedListeners.add(onChange);
+  return () => {
+    stoppedListeners.delete(onChange);
+  };
+}
+
+/**
+ * The timer itself. It counts from the start time, never from the page
+ * opening, so it stays right through a call, the screen locking or no
+ * signal. With `data` null it is still loading, and shows any timer this
+ * phone has running from its own copy.
+ */
+export function Timer({ data, noDog = false }: { data: TimerData | null; noDog?: boolean }) {
+  const kept = useKeptCaptures();
+  const online = useOnline();
+  const now = useClock();
+  const stopped = useSyncExternalStore(subscribeStopped, () => stoppedNow, () => null);
+  // Captures stopped on another phone or removed since this page loaded, which its data still shows running.
+  const [dropped, setDropped] = useState<string[]>([]);
+  const canLock = useSyncExternalStore(noChange, () => "wakeLock" in navigator, () => true);
+  const [lockFailed, setLockFailed] = useState(false);
+  const [called, setCalled] = useState(false);
+  const started = useRef(false);
+
+  const timeZone = data?.timeZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const current = currentCapture(kept, data, dropped);
+  // A stop shows until another capture starts; until then nothing counts or checks.
+  const showStopped = stopped !== null && stopped.status !== "removed" && (!current || current.id === stopped.id);
+
+  // A tap on Happening now starts the timer before this page opens; if it couldn't, start it now.
+  useEffect(() => {
+    if (!data || started.current) return;
+    started.current = true;
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("start") !== "1") return;
+    window.history.replaceState(null, "", url.pathname);
+    // Read from storage, not the first render, which can't see it yet.
+    const list = readCaptures();
+    // Someone else's timer is running for the dog: this phone shows theirs rather than a second one.
+    const theirs = data.running && navigator.onLine && !list.some((c) => c.id === data.running?.id && c.endedAt);
+    if (!runningIn(list, data.dogId) && !theirs) {
+      setStoppedNow(null);
+      startCapture(data.dogId);
+    }
+  }, [data]);
+
+  // Keep the screen on while it runs, and again each time the page comes back into view.
+  const runningId = showStopped ? null : (current?.id ?? null);
+  useEffect(() => {
+    if (!runningId || !canLock) return;
+    let lock: WakeLockSentinel | null = null;
+    let alive = true;
+    const take = () => {
+      if (document.visibilityState !== "visible") return;
+      navigator.wakeLock.request("screen").then(
+        (l) => {
+          if (alive) lock = l;
+          else void l.release();
+        },
+        () => setLockFailed(true),
+      );
+    };
+    take();
+    document.addEventListener("visibilitychange", take);
+    return () => {
+      alive = false;
+      document.removeEventListener("visibilitychange", take);
+      void lock?.release();
+    };
+  }, [runningId, canLock]);
+
+  // If another phone in the household stops it, or the person who started it removes it, stop here too.
+  const sent = current ? !kept.some((c) => c.id === current.id && !c.sentStart) : false;
+  const startedAt = current?.startedAt ?? null;
+  useEffect(() => {
+    if (!runningId || !sent || !online) return;
+    const check = () =>
+      void checkCapture(runningId).then(
+        (r) => {
+          if (!("stoppedAt" in r) && !("gone" in r)) return;
+          forgetCapture(runningId);
+          setDropped((ids) => [...ids, runningId]);
+          setStoppedNow(
+            "stoppedAt" in r
+              ? { id: runningId, startedAt: startedAt ?? r.stoppedAt, endedAt: r.stoppedAt, status: "saved", elsewhere: true }
+              : { id: runningId, startedAt: startedAt ?? new Date().toISOString(), endedAt: new Date().toISOString(), status: "removed", elsewhere: false },
+          );
+        },
+        () => undefined,
+      );
+    const timer = window.setInterval(check, CHECK_MS);
+    return () => window.clearInterval(timer);
+  }, [runningId, startedAt, sent, online]);
+
+  const stop = () => {
+    if (!current) return;
+    const s = stopCapture(current, data?.thresholds ?? []);
+    setStoppedNow({ id: s.id, startedAt: s.startedAt, endedAt: s.endedAt, status: "sending", elsewhere: false });
+    void sendCapture().then(() =>
+      setStoppedNow((prev) => (prev && prev.id === s.id && prev.status === "sending" ? { ...prev, status: "waiting" } : prev)),
+    );
+  };
+
+  if (stopped && showStopped) {
+    // Saved once Tailhelm has it, whichever part of the app sent it, under the id it has there.
+    const done = finishedAs(stopped.id);
+    const view: Stopped = done
+      ? { ...stopped, id: done.id, endedAt: done.stoppedAt ?? stopped.endedAt, elsewhere: stopped.elsewhere || done.stoppedAt !== null, status: "saved" }
+      : stopped.status === "waiting" && !kept.some((c) => c.id === stopped.id)
+        ? { ...stopped, status: "saved" }
+        : stopped;
+    return <StoppedView stopped={view} timeZone={timeZone} dogName={data?.dogName ?? null} />;
+  }
+
+  if (!current) {
+    if (noDog) {
+      return (
+        <main className="hn-main">
+          <h1 className="hn-title">Happening now</h1>
+          <p className="hn-line">Add your dog first, and Happening now times what is happening and shows your vet&rsquo;s numbers.</p>
+          <Link className="btn btn-primary" href="/dog">
+            Add your dog
+          </Link>
+        </main>
+      );
+    }
+    if (!data) return <main className="hn-main" aria-busy="true" />;
+    return (
+      <main className="hn-main">
+        <h1 className="hn-title">Happening now</h1>
+        <p className="hn-line">
+          {stopped?.status === "removed" ? "The person who started this timer removed it. " : ""}
+          Nothing is being timed for {data.dogName}.
+        </p>
+        <button
+          type="button"
+          className="btn hn-stop"
+          onClick={() => {
+            setStoppedNow(null);
+            startCapture(data.dogId);
+          }}
+        >
+          Start the timer
+        </button>
+        <Link className="lnk hn-lnk" href="/today">
+          Back to Today
+        </Link>
+      </main>
+    );
+  }
+
+  const elapsed = now === null ? null : Math.max(0, now - Date.parse(current.startedAt));
+  const passed = elapsed === null ? [] : passedThresholds(data?.thresholds ?? [], elapsed);
+  const startTime = toLocal(new Date(current.startedAt), timeZone).time;
+
+  return (
+    <main className="hn-main">
+      <h1 className="hn-title">
+        Happening now{data ? <span className="hn-dog"> · {data.dogName}</span> : null}
+      </h1>
+      <p className="hn-clock tn" aria-hidden="true">
+        {elapsed === null ? "0:00" : clockText(elapsed)}
+      </p>
+      <p className="sr" aria-live="polite">
+        {elapsed === null ? "" : `Timer running: ${spokenTime(elapsed)}`}
+      </p>
+      <p className="hn-line tn">{current.by ? `${current.by} started it at ${startTime}` : `Started at ${startTime}`}</p>
+
+      {passed.map((t) => (
+        <div key={t.key} className="banner banner-em" role="alert">
+          <Icon name="alert" />
+          <p>{t.ownerWording}</p>
+        </div>
+      ))}
+
+      <div className="hn-notes stack-4">
+        {!online && (
+          <p className="hn-note">
+            <Icon name="noSignal" size={20} /> No signal. The timer is running on this phone and is saved when there is a signal.
+          </p>
+        )}
+        {called && <p className="hn-note">The timer kept running while you called.</p>}
+        {(!canLock || lockFailed) && <p className="hn-note">This phone may dim the screen. The timer keeps running.</p>}
+      </div>
+
+      {data && data.calls.length > 0 && (
+        <div className="hn-calls stack-12">
+          {data.calls.map((c, i) => (
+            <a
+              key={c.href}
+              className={i === 0 ? "btn btn-emergency btn-call hn-call" : "btn btn-secondary btn-call hn-call"}
+              href={c.href}
+              onClick={() => setCalled(true)}
+            >
+              <Icon name="call" size={28} />
+              <span className="lines">
+                <span className="l1">{c.title}</span>
+                <span className="l2 tn">{c.sub ? `${c.sub} · ${c.phone}` : c.phone}</span>
+              </span>
+            </a>
+          ))}
+          {data.why && <p className="hn-note">{data.why}</p>}
+        </div>
+      )}
+
+      <button type="button" className="btn hn-stop" onClick={stop}>
+        It has stopped
+      </button>
+
+      {data?.plan && (
+        <section className="hn-plan stack-4" aria-label="Your vet's emergency plan">
+          <h2 className="hn-plan-t">Your vet&rsquo;s emergency plan</h2>
+          <p style={{ whiteSpace: "pre-line" }}>&ldquo;{data.plan.words}&rdquo;</p>
+          <p className="hn-note">{data.plan.provenance}</p>
+        </section>
+      )}
+    </main>
+  );
+}
+
+/** What this phone shows as running: its own timer first, then the one Tailhelm has, unless this phone has already stopped that. */
+function currentCapture(kept: LocalCapture[], data: TimerData | null, dropped: string[]): Current | null {
+  const mine = data ? runningIn(kept, data.dogId) : ([...kept].reverse().find((c) => c.endedAt === null) ?? null);
+  if (mine) {
+    const by = data?.running && data.running.id === mine.id ? data.running.by : null;
+    return { id: mine.id, dogId: mine.dogId, startedAt: mine.startedAt, by };
+  }
+  const theirs = data?.running;
+  if (!data || !theirs || dropped.includes(theirs.id) || kept.some((c) => c.id === theirs.id)) return null;
+  return { id: theirs.id, dogId: data.dogId, startedAt: theirs.startedAt, by: theirs.by };
+}
+
+function StoppedView({ stopped, timeZone, dogName }: { stopped: Stopped; timeZone: string; dogName: string | null }) {
+  return (
+    <main className="hn-main">
+      <h1 className="hn-title">It has stopped</h1>
+      <p className="hn-lasted tn">{lastedText(stopped.startedAt, stopped.endedAt, timeZone, formatDate)}</p>
+      {stopped.elsewhere && <p className="hn-line">It was stopped on another phone first, so that time is kept.</p>}
+      <p className="hn-line" role="status">
+        {stopped.status === "sending"
+          ? "Saving…"
+          : stopped.status === "saved"
+            ? `Saved for everyone who looks after ${dogName ?? "your dog"}.`
+            : "Saved on this phone. It reaches Tailhelm when there is a signal."}
+      </p>
+      {stopped.status === "saved" ? (
+        <>
+          <Link className="btn hn-stop" href={`/happening-now/${stopped.id}`}>
+            Add detail now
+          </Link>
+          <Link className="btn btn-secondary hn-later" href="/today">
+            Later
+          </Link>
+          <p className="hn-note">Every detail is optional. A card on Today keeps this open for 48 hours.</p>
+        </>
+      ) : (
+        <>
+          <Link className="btn btn-secondary hn-later" href="/today">
+            Back to Today
+          </Link>
+          {stopped.status === "waiting" && (
+            <p className="hn-note">Once it reaches Tailhelm, a card on Today lets you add the detail for 48 hours.</p>
+          )}
+        </>
+      )}
+    </main>
+  );
+}

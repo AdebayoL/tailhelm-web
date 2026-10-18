@@ -53,7 +53,7 @@ export async function getExportData(since?: { date: LocalDate; instant: string }
       () =>
         supabase
           .from("plan_items")
-          .select("id, dog_condition_id, product, strength, dose_amount, dose_unit, schedule_json, set_by_vet_on, vet_instructions, active, supersedes_id, created_at, created_by")
+          .select("id, dog_condition_id, pack_key, product, strength, dose_amount, dose_unit, schedule_json, set_by_vet_on, vet_instructions, active, supersedes_id, created_at, created_by")
           .in("dog_condition_id", conditionIds)
           .order("created_at")
           .order("id"),

@@ -4,7 +4,7 @@ import { getExportData } from "@/lib/export/queries";
 import { FREE_DAYS } from "@/lib/history/window";
 import { buildLedger } from "@/lib/plus/ledger";
 import { DAY31_ON, type Day31Moment, day31Moment } from "@/lib/plus/offer";
-import { day31Household, firstRecordOn, happeningNow, plusPayer } from "@/lib/plus/queries";
+import { day31Household, firstRecordOn, plusPayer } from "@/lib/plus/queries";
 import { getPack } from "@/packs/registry";
 import { Day31Actions, Day31Sheet } from "./day31-sheet";
 import { Day31Head, Day31Words, LedgerLoading, LedgerTable, loadingRows } from "./day31-view";
@@ -21,7 +21,7 @@ type Props = {
   timeZone: string;
   now: Date;
   today: LocalDate;
-  /** Something on Today needs the owner first: a dose due or late, an injection, an alert. */
+  /** Something on Today needs the owner first: a dose due or late, an injection, an alert, Happening now running. */
   waits: boolean;
   /** Shown from /today?preview=day-31 whatever the day, and never marked as seen. */
   preview: boolean;
@@ -35,13 +35,12 @@ type Props = {
 export async function Day31(props: Props) {
   const { dog, conditionIds, me, names, timeZone, now, today, waits, preview } = props;
   if (!preview && (!DAY31_ON || waits)) return null;
-  const [plus, household, first, happening] = await Promise.all([
+  const [plus, household, first] = await Promise.all([
     plusPayer(dog.id),
     day31Household(dog.id, me),
     firstRecordOn(dog, conditionIds, timeZone, now),
-    happeningNow(dog.id),
   ]);
-  if (!preview && (plus || household.seen || happening)) return null;
+  if (!preview && (plus || household.seen)) return null;
   const moment = day31Moment(first, today) ?? (preview ? previewMoment(first, today) : null);
   if (!moment) return null;
 

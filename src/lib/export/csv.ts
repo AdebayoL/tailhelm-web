@@ -1,5 +1,6 @@
 import { type LocalDate, toLocal } from "@/engine/time";
 import type { PlanSchedule } from "@/engine/schedule";
+import { HAPPENING_KIND } from "@/lib/happening/timer";
 import { describeSchedule } from "@/lib/plan/input";
 import { NOTE_KIND } from "@/lib/notes/input";
 import { WEIGHT_TYPE } from "@/lib/weight/input";
@@ -39,6 +40,8 @@ export type ExportCondition = {
 export type ExportPlanItem = {
   id: string;
   dog_condition_id: string;
+  /** What the pack calls it, or the emergency plan's key. */
+  pack_key?: string;
   product: string | null;
   strength: string | null;
   dose_amount: number | null;
@@ -268,6 +271,22 @@ export function buildExportCsv(
   for (const e of data.events) {
     const start = local(e.started_at).date;
     const end = e.ended_at ? local(e.ended_at).date : null;
+    if (e.kind === HAPPENING_KIND) {
+      // The timed record: when it started, how long it ran in seconds, and when it stopped.
+      const stopped = e.ended_at && local(e.ended_at);
+      rows.push([
+        dogName.get(e.dog_id) ?? "",
+        "Happening now",
+        start,
+        local(e.started_at).time,
+        "",
+        e.ended_at ? num(Math.round((Date.parse(e.ended_at) - Date.parse(e.started_at)) / 1000)) : "",
+        e.ended_at ? "seconds" : "",
+        join([e.note, stopped ? `Stopped at ${stopped.time}${stopped.date !== start ? ` on ${stopped.date}` : ""}` : "Still running"]),
+        who(e.recorded_by),
+      ]);
+      continue;
+    }
     const isNote = e.kind === NOTE_KIND;
     const pack = data.conditions.find((c) => c.dog_id === e.dog_id);
     const label = isNote

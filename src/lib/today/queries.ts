@@ -8,6 +8,7 @@ import { signsType } from "@/lib/signs/signs";
 import { allPages } from "@/lib/supabase/pages";
 import { createClient } from "@/lib/supabase/server";
 import { getPack } from "@/packs/registry";
+import { HAPPENING_KIND } from "@/lib/happening/timer";
 import { NOTE_KIND } from "@/lib/notes/input";
 import { type InjectionInfo, getInjectionInfo } from "@/lib/treatments/queries";
 import { type PastInput, STRESS_EVENT_KIND } from "./past";
@@ -180,14 +181,14 @@ async function getQuickChecks(
 /**
  * The records Past days lists, from the first day shown (null for every day
  * recorded): doses ticked and injections, checks, weights and lab reports,
- * notes and stressful days. Read under row-level security.
+ * notes, stressful days and Happening now. Read under row-level security.
  */
 export async function getPastRecords(
   dogId: string,
   conditionId: string | null,
   timeZone: string,
   fromDate: LocalDate | null,
-): Promise<Pick<PastInput, "items" | "doses" | "observations" | "notes" | "stress">> {
+): Promise<Pick<PastInput, "items" | "doses" | "observations" | "notes" | "stress" | "happenings">> {
   const FAILED = "Could not load past days";
   const supabase = await createClient();
   const from = fromDate && zonedTimeToInstant(fromDate, "00:00", timeZone).toISOString();
@@ -203,7 +204,7 @@ export async function getPastRecords(
     : [];
   const itemIds = items.map((i) => i.id);
   const stress = () => supabase.from("events").select("id, note, started_at, ended_at, recorded_by").eq("dog_id", dogId).eq("kind", STRESS_EVENT_KIND);
-  const [doses, observations, notes, stressful] = await Promise.all([
+  const [doses, observations, notes, stressful, happenings] = await Promise.all([
     itemIds.length > 0
       ? allPages<PastInput["doses"][number]>(() =>
           since(
@@ -241,6 +242,16 @@ export async function getPastRecords(
       (from ? stress().or(`started_at.gte.${from},ended_at.gte.${from}`) : stress()).order("started_at").order("id"),
       FAILED,
     ),
+    allPages<PastInput["happenings"][number]>(() =>
+      since(
+        supabase.from("events").select("id, note, started_at, ended_at, recorded_by").eq("dog_id", dogId).eq("kind", HAPPENING_KIND),
+        "started_at",
+        from,
+      )
+        .order("started_at")
+        .order("id"),
+      FAILED,
+    ),
   ]);
-  return { items, doses, observations, notes, stress: stressful };
+  return { items, doses, observations, notes, stress: stressful, happenings };
 }

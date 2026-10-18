@@ -1,8 +1,9 @@
 import { type LocalDate, addDays, daysBetween, toLocal } from "@/engine/time";
 import { monthYear, weekdayDate } from "@/lib/app/dates";
 import type { ExportData, ExportObservation, ExportPlanItem, ExportTreatment } from "@/lib/export/csv";
+import { HAPPENING_KIND, happeningLabel } from "@/lib/happening/timer";
 import { NOTE_KIND } from "@/lib/notes/input";
-import { describePlanItem, describeSchedule, doseText, formatDate } from "@/lib/plan/input";
+import { describePlanItem, describeSchedule, doseText, formatDate, isEmergencyPlan } from "@/lib/plan/input";
 import { resultTypes } from "@/lib/results/input";
 import { labRows, rangeText, readingText } from "@/lib/results/rows";
 import { signsType } from "@/lib/signs/signs";
@@ -101,7 +102,7 @@ export function buildSummary({ data, dogId, timeZone, now, packFor }: Args): Pdf
     const dose = doseText(i);
     const what =
       i.schedule_json.kind === "event"
-        ? [`on stressful days`, i.vet_instructions].filter(Boolean).join(": ")
+        ? [isEmergencyPlan(i) ? "in an emergency" : "on stressful days", i.vet_instructions].filter(Boolean).join(": ")
         : [dose, describeSchedule(i.schedule_json)].filter(Boolean).join(", ");
     const set = i.set_by_vet_on ? `Set by the vet on ${formatDate(i.set_by_vet_on)}.` : "Date set by the vet not entered.";
     blocks.push(lead(`${itemName(i)}:`, `${what}. ${set}`, { gap: true }));
@@ -248,6 +249,10 @@ export function buildSummary({ data, dogId, timeZone, now, packFor }: Args): Pdf
     const start = local(e.started_at).date;
     const end = e.ended_at ? local(e.ended_at).date : null;
     const when = end && end !== start ? `${formatDate(start)} to ${formatDate(end)}:` : `${formatDate(start)}:`;
+    if (e.kind === HAPPENING_KIND) {
+      blocks.push(lead(`${formatDate(start)}, ${local(e.started_at).time}:`, [happeningLabel(e), e.note].filter(Boolean).join(": ") + `. Started by ${who(e.recorded_by)}.`));
+      continue;
+    }
     const pack = conditions.map((c) => packs.get(c.id)).find((p) => p?.events.some((x) => x.key === e.kind));
     const label = e.kind === STRESS_EVENT_KIND ? "Stressful day" : (pack?.events.find((x) => x.key === e.kind)?.name ?? e.kind.replace(/_/g, " "));
     blocks.push(lead(when, [label, e.note].filter(Boolean).join(": ") + `. Entered by ${who(e.recorded_by)}.`));

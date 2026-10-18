@@ -153,6 +153,27 @@ describe("buildExportCsv", () => {
   });
 });
 
+describe("buildExportCsv with Happening now", () => {
+  it("holds each capture with its start, how many seconds it ran and when it stopped", () => {
+    const happening = (over: Partial<ExportData["events"][number]>) => ({
+      dog_id: "d1",
+      kind: "happening_now",
+      started_at: "2026-10-14T23:58:00Z",
+      ended_at: "2026-10-15T00:02:12Z",
+      note: null,
+      recorded_by: "u1",
+      ...over,
+    });
+    const rows = buildExportCsv(
+      { ...data, events: [happening({ note: "Wobbly after" }), happening({ started_at: "2026-10-16T09:00:00Z", ended_at: null })] },
+      "Europe/London",
+      packFor,
+    ).split("\r\n");
+    expect(rows).toContain("Bella,Happening now,2026-10-15,00:58,,252,seconds,Wobbly after; Stopped at 01:02,Ade");
+    expect(rows).toContain("Bella,Happening now,2026-10-16,10:00,,,,Still running,Ade");
+  });
+});
+
 describe("csvCell", () => {
   it("quotes commas, quotes and line breaks", () => {
     expect(csvCell("a, b")).toBe('"a, b"');

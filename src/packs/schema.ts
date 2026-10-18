@@ -140,6 +140,18 @@ export const TrendRule = z.object({
   ...cited,
 });
 
+/**
+ * A published time limit for the Happening now timer: as it passes, the
+ * screen says this one sentence and the call buttons come first.
+ */
+export const LiveThreshold = z.object({
+  key: Key,
+  afterMinutes: z.number().positive(),
+  /** Must lead to calling the vet. Attested by the reviewing vet. */
+  ownerWording: z.string().min(1),
+  ...cited,
+});
+
 /** Tier 4 sources may back only definitions and mechanisms. */
 export const Definition = z.object({
   key: Key,
@@ -184,6 +196,8 @@ export const ConditionPack = z.object({
   events: z.array(EventType),
   crisisSigns: z.array(CrisisSign),
   alertRules: z.array(AlertRule),
+  /** The condition's limits for the Happening now timer. Without any, it runs as a timer only. */
+  happeningNow: z.object({ thresholds: z.array(LiveThreshold) }).optional(),
   trendRules: z.array(TrendRule),
   definitions: z.array(Definition),
   conflicts: z.array(Conflict),

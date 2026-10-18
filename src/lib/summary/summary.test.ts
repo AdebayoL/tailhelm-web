@@ -112,6 +112,7 @@ const data: ExportData = {
   events: [
     { dog_id: "d1", kind: "stressful_event", started_at: "2026-11-05T17:00:00Z", ended_at: null, note: "Bonfire night", recorded_by: "u1" },
     { dog_id: "d1", kind: "stressful_event", started_at: "2026-10-15T09:00:00Z", ended_at: "2026-10-16T18:00:00Z", note: "Kennels", recorded_by: "u2" },
+    { dog_id: "d1", kind: "happening_now", started_at: "2026-10-14T02:12:00Z", ended_at: "2026-10-14T02:16:12Z", note: "Wobbly after", recorded_by: "u1" },
     { dog_id: "d1", kind: "note", started_at: "2026-10-12T10:00:00Z", ended_at: null, note: "Slower on the walk.", recorded_by: "u2" },
     { dog_id: "d1", kind: "note", started_at: "2026-05-01T10:00:00Z", ended_at: null, note: "From the spring.", recorded_by: "u2" },
   ],
@@ -167,11 +168,12 @@ describe("buildSummary", () => {
     expect(t).not.toContain("22.0 kg");
   });
 
-  it("gives signs, stressful days and notes from the period only", () => {
+  it("gives signs, stressful days, Happening now and notes from the period only", () => {
     const t = text();
     expect(t).toContain("Checks saved on 2 days, with signs ticked on 1 of them.");
     expect(t).toContain("  10 Oct 2026: Less energy than usual, Vomiting");
     expect(t).toContain("15 Oct 2026 to 16 Oct 2026: Stressful day: Kennels. Entered by Sam.");
+    expect(t).toContain("14 Oct 2026, 03:12: Happening now, 4 min 12 s: Wobbly after. Started by Adebayo.");
     expect(t).not.toContain("Bonfire night");
     expect(t).toContain("12 Oct 2026, Sam: Slower on the walk.");
     expect(t).not.toContain("From the spring.");

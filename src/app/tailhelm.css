@@ -1426,3 +1426,43 @@
   /* Plus on the Dog tab */
   .plus-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 }
+
+/* ---------- Happening now ----------
+   Working styles until its Claude Design pass: the timer screen is dark, its
+   numbers very large, its buttons at least 64 px and nothing below 18 px. */
+@layer components {
+  .hn { min-height: 100dvh; display: flex; flex-direction: column; background: var(--ink-deep); color: #FFFFFF; }
+  .hn > .app-status { padding: 12px 20px 0; }
+  .hn-main { width: 100%; max-width: 600px; margin-inline: auto; padding: max(24px, env(safe-area-inset-top)) 20px max(40px, env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 20px; font-size: 18px; line-height: 26px; }
+  .hn-title { font-size: 24px; line-height: 32px; font-weight: 600; }
+  .hn-dog { color: var(--on-ink-2); font-weight: 500; }
+  .hn-clock { font-size: clamp(88px, 28vw, 168px); line-height: 1; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; margin: 8px 0 0; }
+  .hn-lasted { font-size: 28px; line-height: 36px; font-weight: 600; }
+  .hn-line, .hn-note { color: var(--on-ink-2); font-size: 18px; line-height: 26px; }
+  .hn-note { display: flex; gap: 8px; align-items: flex-start; }
+  .hn .banner { font-size: 18px; line-height: 26px; }
+  .hn-call { min-height: 88px; }
+  .hn .btn-call .l2 { font-size: 18px; line-height: 26px; }
+  .hn .btn-secondary { background: transparent; color: #FFFFFF; box-shadow: inset 0 0 0 1.5px var(--on-ink-2); }
+  .hn .btn-secondary:active { background: var(--ink-raise); }
+  .hn-stop { min-height: 72px; font-size: 22px; line-height: 28px; background: #FFFFFF; color: var(--ink-deep); }
+  .hn-stop:active { background: var(--on-ink-2); }
+  .hn-later { min-height: 64px; }
+  .hn-lnk { align-self: center; color: #FFFFFF; font-size: 18px; }
+  .hn .btn:focus-visible, .hn .lnk:focus-visible { outline: 2px solid var(--ink-accent); outline-offset: 2px; }
+  .hn-plan { border-top: 1px solid var(--ink-line); padding-top: 20px; }
+  .hn-plan-t { font-size: 18px; line-height: 26px; font-weight: 600; color: var(--on-ink-2); }
+
+  /* The way in, on Today and Emergency */
+  .hn-entry { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; align-items: center; column-gap: 14px; min-height: 72px; padding: 14px 18px; border-radius: 12px; background: var(--ink-band); color: #FFFFFF; text-decoration: none; box-shadow: var(--shadow-1); }
+  .hn-entry .lines { display: flex; flex-direction: column; }
+  .hn-entry .l1 { font-size: 20px; line-height: 28px; font-weight: 600; }
+  .hn-entry .l2 { font-size: 16px; line-height: 24px; color: var(--on-ink-2); }
+  .hn-entry .ic { color: var(--ink-accent); }
+  .hn-entry.is-running { background: var(--emergency-fill); }
+  .hn-entry.is-running .l2, .hn-entry.is-running .ic { color: #FFFFFF; }
+  .hn-entry:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+  .hn-pulse { justify-self: center; width: 14px; height: 14px; border-radius: 50%; background: #FFFFFF; animation: hn-pulse 1.6s ease-in-out infinite; }
+  @keyframes hn-pulse { 50% { opacity: .35; } }
+  @media (prefers-reduced-motion: reduce) { .hn-pulse { animation: none; } }
+}

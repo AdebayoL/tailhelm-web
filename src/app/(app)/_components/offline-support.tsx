@@ -6,6 +6,8 @@ import { Icon } from "@/app/_components/icon";
 import { keptPageSavedAt, startOfflineSupport } from "@/lib/offline/client";
 import { type Outcome, QUEUE_CHANGED, dismissOutcome, outcomes, queuedTicks } from "@/lib/offline/queue";
 import { sendWaitingTicks } from "@/lib/offline/sync";
+import { CAPTURE_CHANGED, unsentCaptures } from "@/lib/happening/local";
+import { type SendResult, sendCapture, settleCaptures } from "@/lib/happening/sync";
 import { offlineBannerText, offlineUnseenText } from "@/lib/offline/text";
 
 function subscribe(onChange: () => void) {
@@ -19,10 +21,10 @@ function subscribe(onChange: () => void) {
 
 /**
  * Registers the service worker, says when the phone has no signal, sends
- * ticks made with no signal once there is one, and says if any could not be
- * recorded as made.
+ * ticks and Happening now timers made with no signal once there is one, and
+ * says if any ticks could not be recorded as made.
  */
-export function OfflineSupport({ shared = "" }: { shared?: string }) {
+export function OfflineSupport({ shared = "", quiet = false }: { shared?: string; quiet?: boolean }) {
   const pathname = usePathname();
   const router = useRouter();
   const offline = useSyncExternalStore(
@@ -62,6 +64,31 @@ export function OfflineSupport({ shared = "" }: { shared?: string }) {
     return () => window.clearInterval(retry);
   }, [offline, waiting, router]);
 
+  // Happening now timers kept on this phone: send each start and stop as soon as there is a signal.
+  useEffect(() => {
+    if (offline) return;
+    let last: Promise<SendResult> | null = null;
+    const send = () => {
+      const sending = sendCapture();
+      if (sending === last) return;
+      last = sending;
+      void sending.then((r) => {
+        if (r.changed) router.refresh();
+      });
+    };
+    send();
+    // The timer screen checks for itself, so it can say who stopped it.
+    if (!pathname.startsWith("/happening-now")) void settleCaptures();
+    window.addEventListener(CAPTURE_CHANGED, send);
+    const retry = window.setInterval(() => {
+      if (unsentCaptures().length > 0) send();
+    }, 60_000);
+    return () => {
+      window.removeEventListener(CAPTURE_CHANGED, send);
+      window.clearInterval(retry);
+    };
+  }, [offline, router, pathname]);
+
   useEffect(() => {
     if (!offline) return;
     let current = true;
@@ -73,7 +100,7 @@ export function OfflineSupport({ shared = "" }: { shared?: string }) {
     };
   }, [offline, pathname]);
 
-  if (!offline && notes.length === 0) return null;
+  if (quiet || (!offline && notes.length === 0)) return null;
   const unseen = offlineUnseenText(shared);
   return (
     <div className="app-status stack-8">

@@ -17,11 +17,11 @@ const STATIC = "tailhelm-static-v1";
 const STATIC_LIMIT = 300;
 
 /** The signed-in pages that may be kept for offline use. Matches PROTECTED_PREFIXES. */
-const APP_PAGES = ["/today", "/trends", "/care-team", "/dog", "/emergency", "/vet-visit", "/reminders", "/setup"];
+const APP_PAGES = ["/today", "/trends", "/care-team", "/dog", "/emergency", "/happening-now", "/vet-visit", "/reminders", "/setup"];
 /** Never kept: downloads, not pages. */
 const NEVER_KEEP = ["/dog/export", "/dog/summary"];
 /** Fetched ahead so they open with no signal even before the owner visits them. */
-const WARM_PAGES = ["/today", "/emergency", "/vet-visit"];
+const WARM_PAGES = ["/today", "/emergency", "/happening-now", "/vet-visit"];
 
 const under = (path, prefix) => path === prefix || path.startsWith(prefix + "/");
 
@@ -91,7 +91,11 @@ async function fromPage(request) {
     return response;
   } catch {
     const cache = await caches.open(PAGES);
-    const kept = (await cache.match(request.url)) ?? (await cache.match(new URL("/today", request.url).href));
+    // The same page kept under another query, such as Happening now's start link, before Today.
+    const kept =
+      (await cache.match(request.url)) ??
+      (await cache.match(request.url, { ignoreSearch: true })) ??
+      (await cache.match(new URL("/today", request.url).href));
     return kept ?? new Response(OFFLINE_HTML, { headers: { "Content-Type": "text/html; charset=utf-8" } });
   }
 }

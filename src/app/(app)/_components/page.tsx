@@ -96,16 +96,20 @@ export function Page({
   );
 }
 
-/** The no-signal banner: under the header on a phone, under the topbar on a desktop. */
-export function PageStatus() {
+/**
+ * The no-signal banner: under the header on a phone, under the topbar on a
+ * desktop. `quiet` keeps the sending without the banner, for a screen that
+ * says it in its own words.
+ */
+export function PageStatus({ quiet = false }: { quiet?: boolean }) {
   return (
-    <Suspense fallback={<OfflineSupport />}>
-      <Status />
+    <Suspense fallback={<OfflineSupport quiet={quiet} />}>
+      <Status quiet={quiet} />
     </Suspense>
   );
 }
 
-async function Status() {
+async function Status({ quiet }: { quiet: boolean }) {
   const { shared } = await getShell();
-  return <OfflineSupport shared={shared} />;
+  return <OfflineSupport shared={shared} quiet={quiet} />;
 }

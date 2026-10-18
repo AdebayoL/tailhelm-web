@@ -49,6 +49,15 @@ export type PlanItemInput = {
   vet_instructions: string | null;
 };
 
+/**
+ * The vet's written emergency plan: what to do while a crisis is happening,
+ * in the vet's own words. Every condition can hold one. Happening now and
+ * Emergency show it exactly as typed.
+ */
+export const EMERGENCY_PLAN_KEY = "emergency_plan";
+
+export const isEmergencyPlan = (item: { pack_key?: string | null }) => item.pack_key === EMERGENCY_PLAN_KEY;
+
 export type PlanOption = {
   key: string;
   kind: "medicine" | "observation" | "task";
@@ -90,7 +99,14 @@ export function planOptions(conditionKey: string, variant: string | null): PlanO
     scheduleKind: "event",
     hint: "Agree a plan with your vet for times like these, then copy their words here exactly.",
   }));
-  return [...medicines, ...tests, ...plans];
+  const emergency: PlanOption = {
+    key: EMERGENCY_PLAN_KEY,
+    kind: "task",
+    name: "Your vet's written emergency plan",
+    scheduleKind: "event",
+    hint: "Ask your vet what to do in an emergency, then copy their words here exactly. Happening now and Emergency show them.",
+  };
+  return [...medicines, ...tests, ...plans, emergency];
 }
 
 /** Reads one plan item from the form, checked against what the pack lists for the dog's variant. */
@@ -186,7 +202,7 @@ function parseEventPlan(form: FormData, option: PlanOption): { ok: true; value: 
     value: {
       pack_key: option.key,
       kind: "task",
-      product: "Stress plan",
+      product: option.key === EMERGENCY_PLAN_KEY ? "Emergency plan" : "Stress plan",
       strength: null,
       dose_amount: null,
       dose_unit: null,
@@ -304,9 +320,10 @@ export function setByVetText(item: { set_by_vet_on: string | null }): string | n
 /**
  * A plan item as one line of the care plan, in three parts: "**Prednisolone**
  * 2.5 mg twice daily (set by vet 12 Sep 2026)". The amount is the owner's, as
- * typed; for a stressful-day plan the rest is the vet's own words.
+ * typed; for a stressful-day or emergency plan the rest is the vet's own words.
  */
 export function planLine(item: {
+  pack_key?: string | null;
   product: string | null;
   dose_amount: number | null;
   dose_unit: string | null;
@@ -325,7 +342,7 @@ export function planLine(item: {
     case "interval":
       return { name, rest: join(dose, "injection", howOften(s)), set };
     case "event":
-      return { name: `${name} on stressful days`, rest: item.vet_instructions ?? "", set };
+      return { name: isEmergencyPlan(item) ? name : `${name} on stressful days`, rest: item.vet_instructions ?? "", set };
     default:
       return { name, rest: join(dose, describeSchedule(s)), set };
   }

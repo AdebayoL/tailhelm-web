@@ -44,20 +44,6 @@ export async function day31Household(dogId: string, userId: string): Promise<{ s
   return { seen: Boolean(mine?.day31_seen_at), owner: mine?.role === "owner", ownerId: owner?.profile_id ?? null };
 }
 
-/** Whether a Happening now capture is open for the dog: nothing is offered over it. */
-export async function happeningNow(dogId: string): Promise<boolean> {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("events")
-    .select("id")
-    .eq("dog_id", dogId)
-    .eq("capture_mode", "happening_now")
-    .is("ended_at", null)
-    .limit(1);
-  if (error) throw new Error(`Could not check for Happening now: ${error.message}`);
-  return (data ?? []).length > 0;
-}
-
 /**
  * The day of the household's first record since the dog was added: a dose
  * ticked, a check, weight or result, a note or an event. Records typed in

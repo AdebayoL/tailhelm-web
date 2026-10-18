@@ -1,5 +1,6 @@
 import { type LocalDate, type LocalTime, addDays, toLocal } from "@/engine/time";
 import { dayMonth } from "@/lib/app/dates";
+import { happeningLabel } from "@/lib/happening/timer";
 import { historyStart } from "@/lib/history/window";
 import type { Sign } from "@/lib/signs/signs";
 import { type Scale, WEIGHT_TYPE, kgFigure } from "@/lib/weight/input";
@@ -10,7 +11,8 @@ export const STRESS_EVENT_KIND = "stressful_event";
 /**
  * Past days: each day's records as the household kept them, grouped by
  * month. Each record carries its mark (indigo for a daily medicine, plum for
- * an injection, ocean for a measurement, an outline for checks and notes)
+ * an injection, ocean for a measurement, an outline for checks, notes and
+ * Happening now)
  * and who recorded it. Only what was recorded shows; nothing marks a day for
  * what wasn't.
  */
@@ -19,7 +21,7 @@ export type RecordMark = "pred" | "zyc" | "meas" | "chk" | "note";
 /** The filter a record falls under: doses, checks and notes, or measurements. */
 export type RecordGroup = "doses" | "checks" | "measurements";
 
-export type RecordKind = "dose" | "extra" | "injection" | "check" | "weight" | "lab" | "note" | "stress";
+export type RecordKind = "dose" | "extra" | "injection" | "check" | "weight" | "lab" | "note" | "stress" | "happening";
 
 export type PastRecord = {
   id: string;
@@ -69,6 +71,7 @@ type ObservationRow = {
 };
 type NoteRow = { id: string; started_at: string; note: string; recorded_by: string | null; created_at: string | null };
 type StressRow = { id: string; note: string | null; started_at: string; ended_at: string | null; recorded_by?: string | null };
+type HappeningRow = { id: string; note: string | null; started_at: string; ended_at: string | null; recorded_by: string | null };
 
 export type PastInput = {
   items: ItemRow[];
@@ -76,6 +79,8 @@ export type PastInput = {
   observations: ObservationRow[];
   notes: NoteRow[];
   stress: StressRow[];
+  /** Happening now captures: when each started and how long it ran. */
+  happenings: HappeningRow[];
   /** The pack's quick-check signs, and the key of its check. */
   signs: Sign[];
   signsKey: string | null;
@@ -174,6 +179,19 @@ export function pastDays(input: PastInput, today: LocalDate, timeZone: string, f
     for (let date = from === null || startsOn > from ? startsOn : from; date <= endsOn && date <= today; date = addDays(date, 1)) {
       add(date, { id: `${e.id}|${date}`, kind: "stress", mark: "note", group: "checks", time: null, text: `Stressful day: ${e.note ?? "no details given"}`, by: e.recorded_by ?? null });
     }
+  }
+
+  for (const h of input.happenings) {
+    const started = local(h.started_at);
+    add(started.date, {
+      id: h.id,
+      kind: "happening",
+      mark: "note",
+      group: "checks",
+      time: started.time,
+      text: [happeningLabel(h), h.note].filter(Boolean).join(": "),
+      by: h.recorded_by,
+    });
   }
 
   // A stressful day first, then records with no time, then by time; records at the same time keep the order they were made.

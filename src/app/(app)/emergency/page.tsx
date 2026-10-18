@@ -11,7 +11,8 @@ import { requireOwner } from "@/lib/auth/session";
 import { type Call, emergencyCalls } from "@/lib/dogs/hours";
 import { telHref } from "@/lib/dogs/input";
 import { getMyDog } from "@/lib/dogs/queries";
-import { formatDate, planLine } from "@/lib/plan/input";
+import { getCaptures } from "@/lib/happening/queries";
+import { formatDate, isEmergencyPlan, planLine } from "@/lib/plan/input";
 import { getDogPlan } from "@/lib/plan/queries";
 import { getResults } from "@/lib/results/queries";
 import { getTimeZone, householdNames } from "@/lib/today/queries";
@@ -20,6 +21,7 @@ import { WEIGHT_TYPE, vetWeight } from "@/lib/weight/input";
 import { conditionName } from "@/packs/names";
 import { PageStatus } from "../_components/page";
 import { OwnerOnly } from "../_components/owner-only";
+import { HappeningEntry } from "../_components/happening-entry";
 import { CloseButton } from "./close-button";
 import { FullScreenCard } from "./full-screen";
 
@@ -27,8 +29,9 @@ export const metadata: Metadata = { title: "Emergency · Tailhelm" };
 
 /**
  * Reachable in one tap from every screen and built for the 3 a.m. rule: no
- * typing, no choices, large targets. The crisis checklist will appear here
- * only from an attested condition pack.
+ * typing, no choices, large targets. Happening now starts from here too, and
+ * the vet's written emergency plan shows in their own words. The crisis
+ * checklist will appear here only from an attested condition pack.
  */
 export default function EmergencyPage() {
   return (
@@ -110,7 +113,13 @@ async function Calls() {
       </div>
     );
   }
-  const [plan, names, timeZone] = await Promise.all([getDogPlan(dog.id), householdNames(dog.id), getTimeZone(owner.userId)]);
+  const [plan, names, timeZone, { running }] = await Promise.all([
+    getDogPlan(dog.id),
+    householdNames(dog.id),
+    getTimeZone(owner.userId),
+    getCaptures(dog.id, new Date()),
+  ]);
+  const emergencyPlan = plan?.items.find((i) => isEmergencyPlan(i) && i.vet_instructions) ?? null;
   // Daily medicines first, then injections, as the card is read top down at the clinic desk.
   const meds = (plan?.items ?? [])
     .filter((i) => i.schedule_json.kind === "fixed" || i.schedule_json.kind === "interval")
@@ -164,6 +173,34 @@ async function Calls() {
               Add your vet&rsquo;s numbers
             </Link>
           </>
+        )}
+        <HappeningEntry
+          dogId={dog.id}
+          timeZone={timeZone}
+          running={
+            running && {
+              id: running.id,
+              startedAt: running.started_at,
+              by: running.recorded_by === owner.userId ? null : (running.recorded_by && names[running.recorded_by]) ?? "Someone in the household",
+            }
+          }
+        />
+        {emergencyPlan && (
+          <section className="panel stack-4" aria-label="Your vet's emergency plan">
+            <h2 className="ty-label c2">Your vet&rsquo;s emergency plan, as you entered it</h2>
+            <p className="ty-lead" style={{ whiteSpace: "pre-line" }}>
+              &ldquo;{emergencyPlan.vet_instructions}&rdquo;
+            </p>
+            <p className="prov">
+              {[
+                emergencyPlan.set_by_vet_on && `Set by vet ${formatDate(emergencyPlan.set_by_vet_on)}`,
+                `entered by ${who(emergencyPlan.created_by)}`,
+              ]
+                .filter(Boolean)
+                .join(" · ")
+                .replace(/^entered/, "Entered")}
+            </p>
+          </section>
         )}
       </div>
 

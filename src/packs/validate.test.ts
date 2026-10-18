@@ -19,6 +19,15 @@ describe("validatePack", () => {
     expect(validatePack(pack, register).length).toBeGreaterThan(0);
   });
 
+  it("rejects a Happening now limit with no citation, or one that holds a dose", () => {
+    const uncited = clone(stubEpilepsy);
+    uncited.happeningNow.thresholds[0].citations = [];
+    expect(validatePack(uncited, register).length).toBeGreaterThan(0);
+    const dosed = clone(stubEpilepsy);
+    dosed.happeningNow.thresholds[0].ownerWording = "Give 5 mg now, then call your vet.";
+    expect(messages(dosed).some((m) => m.startsWith("Contains"))).toBe(true);
+  });
+
   it("rejects a citation with a blank section", () => {
     const pack = clone(stubCycle);
     pack.medicines[0].citations[0].section = "  ";

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { PlanSchedule } from "@/engine/schedule";
-import { describePlanItem, doseText, formatDate, howOften, parseConditionForm, parsePlanItemForm, planLine, setByVetText } from "./input";
+import { EMERGENCY_PLAN_KEY, describePlanItem, doseText, formatDate, howOften, parseConditionForm, parsePlanItemForm, planLine, planOptions, setByVetText } from "./input";
 
 const BANNED = /\b(safe|normal|fine|streak|compliance|administer|dosage)\b/i;
 
@@ -144,6 +144,14 @@ describe("parsePlanItemForm", () => {
     });
   });
 
+  it("keeps the vet's written emergency plan word for word, for every condition", () => {
+    expect(planOptions("addisons", "typical").at(-1)).toMatchObject({ key: EMERGENCY_PLAN_KEY, kind: "task", scheduleKind: "event" });
+    const words = "Give the emergency injection from the red box, then call us or the out-of-hours vet.";
+    const r = parsePlanItemForm(form({ pack_key: EMERGENCY_PLAN_KEY, vet_instructions: words, set_by_vet_on: "2026-09-12" }), "addisons", "typical");
+    expect(r.ok && r.value).toMatchObject({ pack_key: EMERGENCY_PLAN_KEY, product: "Emergency plan", dose_amount: null, vet_instructions: words });
+    expect(planOptions("unknown", null)).toEqual([]);
+  });
+
   it("needs the vet's words and the date they gave the plan", () => {
     const r = parsePlanItemForm(form({ pack_key: "stressful_event", vet_instructions: " ", set_by_vet_on: "" }), "addisons", "typical");
     expect(r.ok).toBe(false);
@@ -216,6 +224,11 @@ describe("planLine", () => {
     expect(
       planLine({ ...item, dose_amount: null, dose_unit: null, schedule_json: { kind: "event" }, vet_instructions: "Extra 2.5 mg on the morning." }),
     ).toEqual({ name: "Prednisolone on stressful days", rest: "Extra 2.5 mg on the morning.", set: "(set by vet 12 Sep 2026)" });
+  });
+
+  it("names an emergency plan without the stressful-day wording", () => {
+    const plan = { ...item, pack_key: EMERGENCY_PLAN_KEY, product: "Emergency plan", dose_amount: null, dose_unit: null, schedule_json: { kind: "event" } as PlanSchedule };
+    expect(planLine({ ...plan, vet_instructions: "Call us first." })).toEqual({ name: "Emergency plan", rest: "Call us first.", set: "(set by vet 12 Sep 2026)" });
   });
 
   it("leaves out what was not entered", () => {

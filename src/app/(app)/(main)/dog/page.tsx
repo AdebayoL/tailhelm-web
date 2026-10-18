@@ -14,7 +14,7 @@ import { hoursLines } from "@/lib/dogs/hours";
 import { type Dog, getMyDog } from "@/lib/dogs/queries";
 import { getMyName } from "@/lib/household/queries";
 import { myPlan, plusPayer } from "@/lib/plus/queries";
-import { describePlanItem, formatDate, planLine, planOptions, scheduleTimes } from "@/lib/plan/input";
+import { describePlanItem, formatDate, isEmergencyPlan, planLine, planOptions, scheduleTimes } from "@/lib/plan/input";
 import { type PlanItem, getDogPlan } from "@/lib/plan/queries";
 import { getResults } from "@/lib/results/queries";
 import { getTimeZone, householdNames } from "@/lib/today/queries";
@@ -261,7 +261,9 @@ function rowFacts(item: PlanItem, injection: InjectionInfo | undefined, who: (p:
       };
     }
     case "event":
-      return { phone: "Shown with stressful days on Today", desk: `Entered by ${who(item.created_by)}`, schedule: "On stressful days" };
+      return isEmergencyPlan(item)
+        ? { phone: "Shown on Happening now and Emergency", desk: `Entered by ${who(item.created_by)}`, schedule: "In an emergency" }
+        : { phone: "Shown with stressful days on Today", desk: `Entered by ${who(item.created_by)}`, schedule: "On stressful days" };
     case "offset":
       return { phone: `Reminder ${s.time} · ${entered}`, desk: `Entered by ${who(item.created_by)}`, schedule: "After each injection" };
     default:

@@ -11,7 +11,7 @@ import { requireSetup } from "@/lib/setup/queries";
 import { getReminderIssues } from "@/lib/reminders/health-queries";
 import { initial } from "@/lib/app/words";
 import { telHref } from "@/lib/dogs/input";
-import { doseText, formatDate, planLine } from "@/lib/plan/input";
+import { doseText, formatDate, isEmergencyPlan, planLine } from "@/lib/plan/input";
 import type { PlanItem } from "@/lib/plan/queries";
 import { getResults } from "@/lib/results/queries";
 import { resultTypes } from "@/lib/results/input";
@@ -22,12 +22,14 @@ import { cycleCells, firstDoseOn } from "@/lib/today/view";
 import { discardDate, vialRule, vialWarning, vialWarningText } from "@/lib/treatments/vial";
 import { getPack } from "@/packs/registry";
 import { day31Waits } from "@/lib/plus/offer";
+import { getCaptures } from "@/lib/happening/queries";
 import { CareRing } from "../../_components/care-ring";
 import { Page } from "../../_components/page";
 import { NoteForm } from "../trends/note-form";
 import { removeStressEvent, undoTick } from "./actions";
 import { DoseCard, type DoseView } from "./dose-card";
 import { Day31 } from "./day31";
+import { HappeningOnToday } from "./happening";
 import { DoseList } from "./doses";
 import type { Vet } from "./guard-sheet";
 import { InjectionLog } from "./injection-log";
@@ -81,8 +83,10 @@ async function TodayContent({ searchParams }: { searchParams: Promise<Record<str
     </span>
   );
   if (!plan || plan.items.length === 0) {
+    const captures = await getCaptures(dog.id, input.now);
     return (
       <Page title={dog.name} sub={sub} aside={avatar} dog space={24}>
+        <HappeningOnToday dogId={dog.id} captures={captures} me={input.me} names={input.names} timeZone={input.timeZone} now={input.now} />
         <section className="card stack-16">
           <h2 className="ty-section">Add {dog.name}&rsquo;s care plan</h2>
           <p>Enter each medicine exactly as your vet prescribed it, and it shows here each day.</p>
@@ -174,9 +178,9 @@ async function TodayBoard({
   const alert = signs && signsAlert ? signsAlertText(signsAlert, tickedKeys, signs, today.date, formatDate) : null;
 
   const labTypes = resultTypes(pack).map((t) => t.key);
-  const [lastResult] = await getResults(plan.condition.id, labTypes, 1);
+  const [[lastResult], captures] = await Promise.all([getResults(plan.condition.id, labTypes, 1), getCaptures(dog.id, input.now)]);
   const lastResultOn = lastResult ? toLocal(new Date(lastResult.taken_at), input.timeZone).date : null;
-  const stressPlan = plan.items.find((i) => i.schedule_json.kind === "event") ?? null;
+  const stressPlan = plan.items.find((i) => i.schedule_json.kind === "event" && !isEmergencyPlan(i)) ?? null;
 
   const injectionCards = today.countdowns
     .filter((c) => c !== overdue)
@@ -266,6 +270,8 @@ async function TodayBoard({
         />
       }
     >
+      <HappeningOnToday dogId={dog.id} captures={captures} me={input.me} names={input.names} timeZone={input.timeZone} now={input.now} />
+
       <OfflineDay savedOn={today.date} timeZone={input.timeZone} doses={offlineDoses} shared={shared} />
 
       <Suspense fallback={null}>
@@ -463,7 +469,7 @@ async function TodayBoard({
           timeZone={input.timeZone}
           now={input.now}
           today={today.date}
-          waits={day31Waits({ doses: today.doses, injections: today.countdowns, now: input.now, alert: Boolean(alert), happeningNow: false })}
+          waits={day31Waits({ doses: today.doses, injections: today.countdowns, now: input.now, alert: Boolean(alert), happeningNow: Boolean(captures.running) })}
           preview={day31Preview}
         />
       </Suspense>

@@ -16,6 +16,7 @@ const empty: PastInput = {
   observations: [],
   notes: [],
   stress: [],
+  happenings: [],
   signs,
   signsKey: "signs",
   labTypes: [{ key: "electrolytes", name: "Sodium and potassium blood test" }],
@@ -64,6 +65,7 @@ const input: PastInput = {
   ],
   notes: [{ id: "n1", started_at: "2026-10-16T18:40:00Z", note: "Calm after grooming", recorded_by: "ade", created_at: "2026-10-16T18:40:00Z" }],
   stress: [{ id: "e1", note: "Kennels", started_at: "2026-10-15T09:00:00Z", ended_at: "2026-10-16T18:00:00Z", recorded_by: "sam" }],
+  happenings: [{ id: "h1", note: "Wobbly after", started_at: "2026-10-16T02:12:00Z", ended_at: "2026-10-16T02:16:12Z", recorded_by: "ade" }],
 };
 
 describe("pastDays", () => {
@@ -73,6 +75,7 @@ describe("pastDays", () => {
     expect(days.map((d) => d.date)).toEqual(["2026-10-16", "2026-10-15", "2026-09-30", "2026-09-22"]);
     expect(days[0].records.map((r) => [r.time, r.mark, r.text, r.by])).toEqual([
       [null, "note", "Stressful day: Kennels", "sam"],
+      ["03:12", "note", "Happening now, 4 min 12 s: Wobbly after", "ade"],
       ["08:00", "pred", "Prednisolone · given 08:03", "sam"],
       ["08:20", "pred", "Extra Prednisolone, grooming", "sam"],
       ["18:00", "pred", "Prednisolone · given 18:06", "ade"],

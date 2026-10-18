@@ -95,6 +95,7 @@ export function validatePack(rawPack: unknown, rawRegister: unknown): Issue[] {
     ["crisisSigns", pack.crisisSigns],
     ["alertRules", pack.alertRules],
     ["trendRules", pack.trendRules],
+    ["happeningNow.thresholds", pack.happeningNow?.thresholds ?? []],
   ] as const;
 
   for (const [group, rules] of ruleGroups) {

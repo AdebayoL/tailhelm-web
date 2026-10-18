@@ -30,6 +30,16 @@
   ],
   "crisisSigns": [],
   "alertRules": [],
+  "happeningNow": {
+    "thresholds": [
+      {
+        "key": "long_seizure",
+        "afterMinutes": 5,
+        "ownerWording": "Fixture wording: this has lasted longer than the published limit. Call your vet now.",
+        "citations": [{ "sourceId": "test-consensus", "section": "4.1", "sourceVersion": "2026", "tier": 2, "quote": "Fixture text." }]
+      }
+    ]
+  },
   "trendRules": [],
   "definitions": [],
   "conflicts": [],

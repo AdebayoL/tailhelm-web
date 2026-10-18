@@ -5,6 +5,7 @@ import { requireOwner } from "@/lib/auth/session";
 import { type Dog, getMyDog } from "@/lib/dogs/queries";
 import { type DogPlan, getDogPlan } from "@/lib/plan/queries";
 import { signsType } from "@/lib/signs/signs";
+import { allPages } from "@/lib/supabase/pages";
 import { createClient } from "@/lib/supabase/server";
 import { getPack } from "@/packs/registry";
 import { NOTE_KIND } from "@/lib/notes/input";
@@ -176,22 +177,6 @@ async function getQuickChecks(
   return (data ?? []) as QuickCheck[];
 }
 
-const PAGE = 1000;
-
-/** Every row a query returns, a page at a time, as the database sends at most 1,000 rows at once. */
-async function allPages<T>(
-  build: () => { range: (from: number, to: number) => PromiseLike<{ data: unknown; error: { message: string } | null }> },
-): Promise<T[]> {
-  const rows: T[] = [];
-  for (let from = 0; ; from += PAGE) {
-    const { data, error } = await build().range(from, from + PAGE - 1);
-    if (error) throw new Error(`Could not load past days: ${error.message}`);
-    const page = (data ?? []) as T[];
-    rows.push(...page);
-    if (page.length < PAGE) return rows;
-  }
-}
-
 /**
  * The records Past days lists, from the first day shown (null for every day
  * recorded): doses ticked and injections, checks, weights and lab reports,
@@ -203,6 +188,7 @@ export async function getPastRecords(
   timeZone: string,
   fromDate: LocalDate | null,
 ): Promise<Pick<PastInput, "items" | "doses" | "observations" | "notes" | "stress">> {
+  const FAILED = "Could not load past days";
   const supabase = await createClient();
   const from = fromDate && zonedTimeToInstant(fromDate, "00:00", timeZone).toISOString();
   const since = <Q extends { gte: (column: string, value: string) => Q }>(query: Q, column: string, value: string | null) =>
@@ -212,6 +198,7 @@ export async function getPastRecords(
   const items = conditionId
     ? await allPages<PastInput["items"][number]>(() =>
         supabase.from("plan_items").select("id, product, schedule_json").eq("dog_condition_id", conditionId).order("created_at").order("id"),
+        FAILED,
       )
     : [];
   const itemIds = items.map((i) => i.id);
@@ -229,6 +216,7 @@ export async function getPastRecords(
           )
             .order("given_at")
             .order("id"),
+          FAILED,
         )
       : [],
     conditionId
@@ -240,15 +228,18 @@ export async function getPastRecords(
           )
             .order("taken_at")
             .order("id"),
+          FAILED,
         )
       : [],
     allPages<PastInput["notes"][number]>(() =>
       since(supabase.from("events").select("id, started_at, note, recorded_by, created_at").eq("dog_id", dogId).eq("kind", NOTE_KIND), "started_at", from)
         .order("started_at")
         .order("id"),
+      FAILED,
     ),
     allPages<PastInput["stress"][number]>(() =>
       (from ? stress().or(`started_at.gte.${from},ended_at.gte.${from}`) : stress()).order("started_at").order("id"),
+      FAILED,
     ),
   ]);
   return { items, doses, observations, notes, stress: stressful };

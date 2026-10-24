@@ -112,7 +112,8 @@ export function hoursNow(hours: Hours | null, now: Date, timeZone: string): stri
 }
 
 export type Practice = { name: string | null; phone: string | null; hours: Hours | null };
-export type Call = { title: string; sub: string | null; phone: string };
+/** A call button: its title, the line under it, and who it reaches without the hours, for the screen after "It has stopped". */
+export type Call = { title: string; sub: string | null; phone: string; who: string | null };
 
 /**
  * Which number Emergency shows first. The dog's own vet comes first unless
@@ -127,10 +128,10 @@ export function emergencyCalls(
 ): { first: Call | null; second: Call | null; why: string | null } {
   const ownName = own.name ?? "your vet";
   const ownCall: Call | null = own.phone
-    ? { title: `Call ${ownName}`, sub: ["Your own vet", hoursNow(own.hours, now, timeZone)].filter(Boolean).join(" · "), phone: own.phone }
+    ? { title: `Call ${ownName}`, sub: ["Your own vet", hoursNow(own.hours, now, timeZone)].filter(Boolean).join(" · "), phone: own.phone, who: "Your own vet" }
     : null;
   const oohCall: Call | null = ooh.phone
-    ? { title: "Call out-of-hours vet", sub: [ooh.name, hoursNow(ooh.hours, now, timeZone)].filter(Boolean).join(" · ") || null, phone: ooh.phone }
+    ? { title: "Call out-of-hours vet", sub: [ooh.name, hoursNow(ooh.hours, now, timeZone)].filter(Boolean).join(" · ") || null, phone: ooh.phone, who: ooh.name }
     : null;
   if (!ownCall || !oohCall) return { first: ownCall ?? oohCall, second: null, why: null };
   if (!own.hours) return { first: ownCall, second: oohCall, why: "If your own vet is closed, call the out-of-hours number." };

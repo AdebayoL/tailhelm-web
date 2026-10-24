@@ -44,6 +44,7 @@ function Day({ day, who }: { day: PastDay; who: (p: string | null) => string | n
             <span className="t">{r.time ?? ""}</span>
             <span className="x">{r.text}</span>
             <span className="by">{who(r.by) ?? ""}</span>
+            {r.note && <span className="pd-note">{r.note}</span>}
           </li>
         ))}
       </ul>

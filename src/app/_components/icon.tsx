@@ -73,6 +73,36 @@ const PATHS = {
     </>
   ),
   call: <path d="M8.6 4H6.3A2 2 0 0 0 4.3 6.2C5 13.9 10.1 19 17.8 19.7A2 2 0 0 0 20 17.7v-2.3l-4-1.6-2 2a12.5 12.5 0 0 1-6.3-6.3l2-2z" />,
+  /** Happening now. */
+  stopwatch: (
+    <>
+      <circle cx="12" cy="13.5" r="7.5" />
+      <path d="M12 13.5V9.5" />
+      <path d="M9.5 3.5h5" />
+      <path d="M12 3.5V6" />
+      <path d="M18 7.5l1.4-1.4" />
+    </>
+  ),
+  /** The screen may dim. */
+  dim: (
+    <>
+      <circle cx="12" cy="12" r="3.5" />
+      <path d="M12 4v1.5M12 18.5V20M4 12h1.5M18.5 12H20M6.3 6.3l1.1 1.1M16.6 16.6l1.1 1.1M6.3 17.7l1.1-1.1M16.6 7.4l1.1-1.1" />
+    </>
+  ),
+  /** Still on its way: a still glyph, never a spinner. */
+  saving: (
+    <>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M8.5 12h.01M12 12h.01M15.5 12h.01" style={{ strokeWidth: 2.6 }} />
+    </>
+  ),
+  saved: (
+    <>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M8.3 12.3l2.6 2.6 4.9-5.1" />
+    </>
+  ),
   calendar: (
     <>
       <rect x="3.5" y="5" width="17" height="15.5" rx="2" />

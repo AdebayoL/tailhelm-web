@@ -17,7 +17,7 @@ export const STRESS_EVENT_KIND = "stressful_event";
  * what wasn't.
  */
 
-export type RecordMark = "pred" | "zyc" | "meas" | "chk" | "note";
+export type RecordMark = "pred" | "zyc" | "meas" | "chk" | "note" | "hnow";
 /** The filter a record falls under: doses, checks and notes, or measurements. */
 export type RecordGroup = "doses" | "checks" | "measurements";
 
@@ -31,6 +31,8 @@ export type PastRecord = {
   /** The time it was for, or null when it covers the day or was entered for it later. */
   time: LocalTime | null;
   text: string;
+  /** What was noticed, shown beneath the record: Happening now's detail. */
+  note?: string | null;
   /** The household member who recorded it. */
   by: string | null;
 };
@@ -186,10 +188,11 @@ export function pastDays(input: PastInput, today: LocalDate, timeZone: string, f
     add(started.date, {
       id: h.id,
       kind: "happening",
-      mark: "note",
+      mark: "hnow",
       group: "checks",
       time: started.time,
-      text: [happeningLabel(h), h.note].filter(Boolean).join(": "),
+      text: happeningLabel(h),
+      note: h.note,
       by: h.recorded_by,
     });
   }

@@ -14,7 +14,13 @@ export const HAPPENING_KIND = "happening_now";
 export const FINISH_LATER_HOURS = 48;
 
 /** A published time limit from the condition pack. Addison's has none, so its timer never changes. */
-export type LiveThreshold = { key: string; afterMinutes: number; ownerWording: string };
+export type LiveThreshold = {
+  key: string;
+  afterMinutes: number;
+  ownerWording: string;
+  /** Where the limit is published, shown under it. */
+  cite?: string | null;
+};
 
 const pad = (n: number) => String(n).padStart(2, "0");
 

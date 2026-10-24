@@ -9,6 +9,7 @@ import { formatDate, isEmergencyPlan } from "@/lib/plan/input";
 import { getDogPlan } from "@/lib/plan/queries";
 import { getTimeZone, householdNames } from "@/lib/today/queries";
 import { getPack } from "@/packs/registry";
+import { citeLine } from "@/packs/sources";
 import { OwnerOnly } from "../_components/owner-only";
 import { PageStatus } from "../_components/page";
 import { Timer, type TimerData } from "./timer";
@@ -59,7 +60,12 @@ async function Content() {
     calls: [first, second].flatMap((c) => (c ? [{ ...c, href: telHref(c.phone) }] : [])),
     why,
     // Only what the pack publishes, with its citation behind it. Addison's publishes none, so its timer only counts.
-    thresholds: (pack?.happeningNow?.thresholds ?? []).map(({ key, afterMinutes, ownerWording }) => ({ key, afterMinutes, ownerWording })),
+    thresholds: (pack?.happeningNow?.thresholds ?? []).map(({ key, afterMinutes, ownerWording, citations }) => ({
+      key,
+      afterMinutes,
+      ownerWording,
+      cite: citeLine(citations[0]),
+    })),
     running: running && {
       id: running.id,
       startedAt: running.started_at,

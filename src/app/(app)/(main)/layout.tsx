@@ -25,7 +25,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <Suspense fallback={null}>
           <SideDog />
         </Suspense>
-        <Suspense fallback={<SideNav />}>
+        <Suspense fallback={<KnownPath><SideNav /></KnownPath>}>
           <NamedSideNav />
         </Suspense>
         <div className="side-foot">
@@ -35,16 +35,25 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
       <div className="app-main">
-        <Suspense fallback={<AppHeader />}>
+        <Suspense fallback={<KnownPath><AppHeader /></KnownPath>}>
           <NamedHeader />
         </Suspense>
         {children}
       </div>
-      <Suspense fallback={<TabBar />}>
+      <Suspense fallback={<KnownPath><TabBar /></KnownPath>}>
         <NamedTabBar />
       </Suspense>
     </div>
   );
+}
+
+/**
+ * The frame's own placeholders read the address. A record's own page, such as
+ * a Happening now record, only knows its address when it is asked for, so
+ * there they wait for it instead of holding up the page.
+ */
+function KnownPath({ children }: { children: React.ReactNode }) {
+  return <Suspense fallback={null}>{children}</Suspense>;
 }
 
 async function SideDog() {

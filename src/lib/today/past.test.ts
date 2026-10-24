@@ -75,13 +75,14 @@ describe("pastDays", () => {
     expect(days.map((d) => d.date)).toEqual(["2026-10-16", "2026-10-15", "2026-09-30", "2026-09-22"]);
     expect(days[0].records.map((r) => [r.time, r.mark, r.text, r.by])).toEqual([
       [null, "note", "Stressful day: Kennels", "sam"],
-      ["03:12", "note", "Happening now, 4 min 12 s: Wobbly after", "ade"],
+      ["03:12", "hnow", "Happening now, 4 min 12 s", "ade"],
       ["08:00", "pred", "Prednisolone · given 08:03", "sam"],
       ["08:20", "pred", "Extra Prednisolone, grooming", "sam"],
       ["18:00", "pred", "Prednisolone · given 18:06", "ade"],
       ["18:30", "chk", "Quick check: Vomiting, Weakness", "ade"],
       ["19:40", "note", "Note: Calm after grooming", "ade"],
     ]);
+    expect(days[0].records[1].note).toBe("Wobbly after");
     expect(days[1].records.map((r) => [r.time, r.text])).toEqual([
       [null, "Stressful day: Kennels"],
       [null, "Weight 24.4 kg · home scale"],

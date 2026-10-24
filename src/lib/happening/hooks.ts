@@ -70,3 +70,16 @@ function subscribeOnline(onChange: () => void) {
 export function useOnline(): boolean {
   return useSyncExternalStore(subscribeOnline, () => navigator.onLine, () => true);
 }
+
+const FINE_POINTER = "(hover: hover) and (pointer: fine)";
+
+function subscribeDevice(onChange: () => void) {
+  const query = window.matchMedia(FINE_POINTER);
+  query.addEventListener("change", onChange);
+  return () => query.removeEventListener("change", onChange);
+}
+
+/** What the notes call the device: "computer" with a mouse or trackpad, otherwise "phone". */
+export function useDeviceWord(): "phone" | "computer" {
+  return useSyncExternalStore(subscribeDevice, () => (window.matchMedia(FINE_POINTER).matches ? "computer" : "phone"), () => "phone");
+}

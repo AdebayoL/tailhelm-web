@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { Icon } from "@/app/_components/icon";
+import { Icon, type IconName } from "@/app/_components/icon";
 import { toLocal } from "@/engine/time";
 import { formatDate } from "@/lib/plan/input";
-import { useClock, useKeptCaptures, useOnline } from "@/lib/happening/hooks";
+import { useClock, useDeviceWord, useKeptCaptures, useOnline } from "@/lib/happening/hooks";
 import { type LocalCapture, forgetCapture, readCaptures, runningIn, startCapture, stopCapture } from "@/lib/happening/local";
 import { finishedAs, sendCapture } from "@/lib/happening/sync";
 import { type LiveThreshold, clockText, lastedText, passedThresholds, spokenTime } from "@/lib/happening/timer";
@@ -16,7 +16,7 @@ export type TimerData = {
   dogName: string;
   timeZone: string;
   /** The vet's numbers, in the order Emergency shows them. */
-  calls: { title: string; sub: string | null; phone: string; href: string }[];
+  calls: { title: string; sub: string | null; phone: string; who: string | null; href: string }[];
   why: string | null;
   thresholds: LiveThreshold[];
   /** The capture Tailhelm has running for the dog, and who started it (null for the person signed in). */
@@ -59,6 +59,7 @@ function subscribeStopped(onChange: () => void) {
 export function Timer({ data, noDog = false }: { data: TimerData | null; noDog?: boolean }) {
   const kept = useKeptCaptures();
   const online = useOnline();
+  const device = useDeviceWord();
   const now = useClock();
   const stopped = useSyncExternalStore(subscribeStopped, () => stoppedNow, () => null);
   // Captures stopped on another phone or removed since this page loaded, which its data still shows running.
@@ -155,42 +156,56 @@ export function Timer({ data, noDog = false }: { data: TimerData | null; noDog?:
       : stopped.status === "waiting" && !kept.some((c) => c.id === stopped.id)
         ? { ...stopped, status: "saved" }
         : stopped;
-    return <StoppedView stopped={view} timeZone={timeZone} dogName={data?.dogName ?? null} />;
+    return <StoppedView stopped={view} timeZone={timeZone} dogName={data?.dogName ?? null} call={data?.calls[0] ?? null} device={device} />;
   }
 
   if (!current) {
     if (noDog) {
       return (
-        <main className="hn-main">
-          <h1 className="hn-title">Happening now</h1>
-          <p className="hn-line">Add your dog first, and Happening now times what is happening and shows your vet&rsquo;s numbers.</p>
-          <Link className="btn btn-primary" href="/dog">
-            Add your dog
-          </Link>
+        <main className="hn-body hn-end">
+          <Heading />
+          <p className="hn-lead hn-gap">Add your dog first, and Happening now times what is happening and shows your vet&rsquo;s numbers.</p>
+          <div className="stack-12 hn-push">
+            <Link className="hn-btn primary" href="/dog">
+              Add your dog
+            </Link>
+            <Link className="hn-btn secondary" href="/today">
+              Back to Today
+            </Link>
+          </div>
         </main>
       );
     }
-    if (!data) return <main className="hn-main" aria-busy="true" />;
+    if (!data) {
+      return (
+        <main className="hn-body hn-end" aria-busy="true">
+          <Heading />
+        </main>
+      );
+    }
     return (
-      <main className="hn-main">
-        <h1 className="hn-title">Happening now</h1>
-        <p className="hn-line">
+      <main className="hn-body hn-end">
+        <Heading />
+        <p className="hn-big hn-gap">
           {stopped?.status === "removed" ? "The person who started this timer removed it. " : ""}
           Nothing is being timed for {data.dogName}.
         </p>
-        <button
-          type="button"
-          className="btn hn-stop"
-          onClick={() => {
-            setStoppedNow(null);
-            startCapture(data.dogId);
-          }}
-        >
-          Start the timer
-        </button>
-        <Link className="lnk hn-lnk" href="/today">
-          Back to Today
-        </Link>
+        <div className="stack-12 hn-push">
+          <button
+            type="button"
+            className="hn-stop"
+            onClick={() => {
+              setStoppedNow(null);
+              startCapture(data.dogId);
+            }}
+          >
+            <Icon name="stopwatch" size={28} />
+            Start the timer
+          </button>
+          <Link className="hn-btn secondary" href="/today">
+            Back to Today
+          </Link>
+        </div>
       </main>
     );
   }
@@ -198,69 +213,140 @@ export function Timer({ data, noDog = false }: { data: TimerData | null; noDog?:
   const elapsed = now === null ? null : Math.max(0, now - Date.parse(current.startedAt));
   const passed = elapsed === null ? [] : passedThresholds(data?.thresholds ?? [], elapsed);
   const startTime = toLocal(new Date(current.startedAt), timeZone).time;
+  const spoken = elapsed === null ? "" : spokenTime(elapsed);
+  const notes = [
+    !online && { key: "signal", icon: "noSignal", text: `No signal. The timer is running on this ${device} and is saved when there is a signal.` },
+    called && { key: "called", icon: "stopwatch", text: "The timer kept running while you called." },
+    (!canLock || lockFailed) && { key: "dim", icon: "dim", text: `This ${device} may dim the screen. The timer keeps running.` },
+  ].filter((n): n is { key: string; icon: IconName; text: string } => Boolean(n));
 
   return (
-    <main className="hn-main">
-      <h1 className="hn-title">
-        Happening now{data ? <span className="hn-dog"> · {data.dogName}</span> : null}
-      </h1>
-      <p className="hn-clock tn" aria-hidden="true">
-        {elapsed === null ? "0:00" : clockText(elapsed)}
-      </p>
-      <p className="sr" aria-live="polite">
-        {elapsed === null ? "" : `Timer running: ${spokenTime(elapsed)}`}
-      </p>
-      <p className="hn-line tn">{current.by ? `${current.by} started it at ${startTime}` : `Started at ${startTime}`}</p>
-
-      {passed.map((t) => (
-        <div key={t.key} className="banner banner-em" role="alert">
-          <Icon name="alert" />
-          <p>{t.ownerWording}</p>
-        </div>
-      ))}
-
-      <div className="hn-notes stack-4">
-        {!online && (
-          <p className="hn-note">
-            <Icon name="noSignal" size={20} /> No signal. The timer is running on this phone and is saved when there is a signal.
-          </p>
-        )}
-        {called && <p className="hn-note">The timer kept running while you called.</p>}
-        {(!canLock || lockFailed) && <p className="hn-note">This phone may dim the screen. The timer keeps running.</p>}
+    <main className="hn-body hn-run">
+      <div className="hn-top">
+        <Heading dogName={data?.dogName} />
+        <Link className="hn-btn secondary hn-top-back" href="/today">
+          Back to Today
+        </Link>
       </div>
 
-      {data && data.calls.length > 0 && (
-        <div className="hn-calls stack-12">
-          {data.calls.map((c, i) => (
-            <a
-              key={c.href}
-              className={i === 0 ? "btn btn-emergency btn-call hn-call" : "btn btn-secondary btn-call hn-call"}
-              href={c.href}
-              onClick={() => setCalled(true)}
-            >
-              <Icon name="call" size={28} />
-              <span className="lines">
-                <span className="l1">{c.title}</span>
-                <span className="l2 tn">{c.sub ? `${c.sub} · ${c.phone}` : c.phone}</span>
-              </span>
-            </a>
-          ))}
-          {data.why && <p className="hn-note">{data.why}</p>}
+      <div className="hn-left">
+        {passed.map((t) => (
+          <div key={t.key} className="hn-limit" role="alert">
+            <Icon name="alert" size={28} />
+            <span>
+              {t.ownerWording}
+              {t.cite && <span className="cite">{t.cite}</span>}
+            </span>
+          </div>
+        ))}
+        <div className="hn-clockblock">
+          <p className={passed.length > 0 ? "hn-clock s" : elapsed !== null && elapsed >= 3_600_000 ? "hn-clock h" : "hn-clock"} role="timer" aria-live="off">
+            {elapsed === null ? "0:00" : clockText(elapsed)}
+          </p>
+          <p className="hn-started">{current.by ? `${current.by} started it at ${startTime}` : `Started at ${startTime}`}</p>
+          <p className="sr" aria-live="polite">
+            {spoken && `Happening now${data ? ` for ${data.dogName}` : ""}: ${spoken === "Under a minute" ? "under a minute" : spoken} so far.`}
+          </p>
         </div>
-      )}
+        {notes.length > 0 && (
+          <div className="hn-notes" role="status">
+            {notes.map((n) => (
+              <p key={n.key} className="hn-note">
+                <Icon name={n.icon} />
+                <span>{n.text}</span>
+              </p>
+            ))}
+          </div>
+        )}
+      </div>
 
-      <button type="button" className="btn hn-stop" onClick={stop}>
-        It has stopped
-      </button>
+      <div className="hn-right">
+        {!data ? (
+          <>
+            <div className="hn-calls" aria-busy="true">
+              <div className="hn-call pending">
+                <Icon name="call" size={32} />
+                <span>
+                  <span className="l1">Your vets</span>
+                  <span className="l2">Getting the numbers you saved</span>
+                </span>
+              </div>
+              <div className="hn-call second pending" />
+            </div>
+            <p className="hn-order">The timer is already running. The call buttons appear here as soon as the numbers arrive.</p>
+          </>
+        ) : data.calls.length > 0 ? (
+          <>
+            <div className="hn-calls">
+              {data.calls.map((c, i) => (
+                <a
+                  key={c.href}
+                  className={i > 0 ? "hn-call second" : passed.length > 0 ? "hn-call first big" : "hn-call first"}
+                  href={c.href}
+                  onClick={() => setCalled(true)}
+                >
+                  <Icon name="call" size={32} />
+                  <span>
+                    <span className="l1">{c.title}</span>
+                    {i === 0 ? (
+                      <>
+                        {c.sub && <span className="l2">{c.sub}</span>}
+                        <span className="num">{c.phone}</span>
+                      </>
+                    ) : (
+                      <span className="l2">{c.sub ? `${c.sub} · ${c.phone}` : c.phone}</span>
+                    )}
+                  </span>
+                </a>
+              ))}
+            </div>
+            {data.why && <p className="hn-order">{data.why}</p>}
+          </>
+        ) : (
+          <p className="hn-quiet">
+            <Icon name="info" />
+            <span>
+              No vet numbers yet. They are added on the Dog tab, and appear here from then on. <Link href="/dog">Open the Dog tab</Link>
+            </span>
+          </p>
+        )}
 
-      {data?.plan && (
-        <section className="hn-plan stack-4" aria-label="Your vet's emergency plan">
-          <h2 className="hn-plan-t">Your vet&rsquo;s emergency plan</h2>
-          <p style={{ whiteSpace: "pre-line" }}>&ldquo;{data.plan.words}&rdquo;</p>
-          <p className="hn-note">{data.plan.provenance}</p>
-        </section>
-      )}
+        {data?.plan && (
+          <section className="hn-plan" aria-labelledby="hn-plan-t">
+            <h2 className="lab" id="hn-plan-t">
+              Your vet&rsquo;s emergency plan
+            </h2>
+            <blockquote>&ldquo;{data.plan.words}&rdquo;</blockquote>
+            <p className="prov2">{data.plan.provenance}</p>
+          </section>
+        )}
+      </div>
+
+      <Link className="hn-link hn-foot-back" href="/today">
+        Back to Today
+      </Link>
+
+      <div className="hn-bar">
+        <button type="button" className="hn-stop" onClick={stop}>
+          <span className="sq" aria-hidden="true" />
+          It has stopped
+        </button>
+      </div>
     </main>
+  );
+}
+
+/** The screen's heading, where focus lands when it opens. */
+function Heading({ dogName }: { dogName?: string }) {
+  const ref = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    ref.current?.focus({ preventScroll: true });
+  }, []);
+  return (
+    <h1 className="hn-head" ref={ref} tabIndex={-1}>
+      <Icon name="stopwatch" size={28} />
+      Happening now{dogName ? ` · ${dogName}` : ""}
+    </h1>
   );
 }
 
@@ -276,38 +362,80 @@ function currentCapture(kept: LocalCapture[], data: TimerData | null, dropped: s
   return { id: theirs.id, dogId: data.dogId, startedAt: theirs.startedAt, by: theirs.by };
 }
 
-function StoppedView({ stopped, timeZone, dogName }: { stopped: Stopped; timeZone: string; dogName: string | null }) {
+/** "It has stopped": the same dark screen a moment later, so there is no flash of white at night. The vet's number stays at the foot. */
+function StoppedView({
+  stopped,
+  timeZone,
+  dogName,
+  call,
+  device,
+}: {
+  stopped: Stopped;
+  timeZone: string;
+  dogName: string | null;
+  call: TimerData["calls"][number] | null;
+  device: "phone" | "computer";
+}) {
+  const status =
+    stopped.status === "sending"
+      ? { cls: "hn-status saving", icon: "saving" as const, text: "Saving…" }
+      : stopped.status === "saved"
+        ? { cls: "hn-status", icon: "saved" as const, text: `Saved for everyone who looks after ${dogName ?? "your dog"}.` }
+        : { cls: "hn-status local", icon: device === "computer" ? ("thisComputer" as const) : ("thisPhone" as const), text: `Saved on this ${device}. It reaches Tailhelm when there is a signal.` };
   return (
-    <main className="hn-main">
-      <h1 className="hn-title">It has stopped</h1>
-      <p className="hn-lasted tn">{lastedText(stopped.startedAt, stopped.endedAt, timeZone, formatDate)}</p>
-      {stopped.elsewhere && <p className="hn-line">It was stopped on another phone first, so that time is kept.</p>}
-      <p className="hn-line" role="status">
-        {stopped.status === "sending"
-          ? "Saving…"
-          : stopped.status === "saved"
-            ? `Saved for everyone who looks after ${dogName ?? "your dog"}.`
-            : "Saved on this phone. It reaches Tailhelm when there is a signal."}
+    <main className="hn-body hn-end">
+      <Heading dogName={dogName ?? undefined} />
+      <p className="hn-clock frozen" aria-hidden="true">
+        {clockText(Date.parse(stopped.endedAt) - Date.parse(stopped.startedAt))}
       </p>
-      {stopped.status === "saved" ? (
-        <>
-          <Link className="btn hn-stop" href={`/happening-now/${stopped.id}`}>
-            Add detail now
-          </Link>
-          <Link className="btn btn-secondary hn-later" href="/today">
-            Later
-          </Link>
-          <p className="hn-note">Every detail is optional. A card on Today keeps this open for 48 hours.</p>
-        </>
-      ) : (
-        <>
-          <Link className="btn btn-secondary hn-later" href="/today">
-            Back to Today
-          </Link>
-          {stopped.status === "waiting" && (
-            <p className="hn-note">Once it reaches Tailhelm, a card on Today lets you add the detail for 48 hours.</p>
-          )}
-        </>
+      <div className="stack-8">
+        <h2 className="hn-big">It has stopped</h2>
+        <p className="hn-lead">{lastedText(stopped.startedAt, stopped.endedAt, timeZone, formatDate)}</p>
+      </div>
+      {stopped.elsewhere && (
+        <p className="hn-status quiet">
+          <Icon name="info" size={28} />
+          <span>It was stopped on another phone first, so that time is kept.</span>
+        </p>
+      )}
+      <p className={status.cls} role="status">
+        <Icon name={status.icon} size={28} />
+        <span>{status.text}</span>
+      </p>
+      <div className="stack-12 hn-acts">
+        {stopped.status === "saved" ? (
+          <>
+            <Link className="hn-btn primary" href={`/happening-now/${stopped.id}`}>
+              Add detail now
+            </Link>
+            <Link className="hn-btn secondary" href="/today">
+              Later
+            </Link>
+            <p className="hn-small">Every detail is optional. A card on Today keeps this open for 48 hours.</p>
+          </>
+        ) : (
+          <>
+            <Link className="hn-btn secondary" href="/today">
+              Back to Today
+            </Link>
+            <p className="hn-small">
+              {stopped.status === "sending"
+                ? "Saving takes a moment. The add-detail buttons appear here once it is saved."
+                : "Once it reaches Tailhelm, a card on Today lets you add the detail for 48 hours."}
+            </p>
+          </>
+        )}
+      </div>
+      {call && (
+        <div className="hn-foot-call">
+          <a className="hn-call first" href={call.href}>
+            <Icon name="call" size={32} />
+            <span>
+              <span className="l1">{call.title}</span>
+              <span className="l2">{call.who ? `${call.who} · ${call.phone}` : call.phone}</span>
+            </span>
+          </a>
+        </div>
       )}
     </main>
   );

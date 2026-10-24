@@ -21,7 +21,7 @@ import { WEIGHT_TYPE, vetWeight } from "@/lib/weight/input";
 import { conditionName } from "@/packs/names";
 import { PageStatus } from "../_components/page";
 import { OwnerOnly } from "../_components/owner-only";
-import { HappeningEntry } from "../_components/happening-entry";
+import { HappeningBand, HappeningEntry, type Running } from "../_components/happening-entry";
 import { CloseButton } from "./close-button";
 import { FullScreenCard } from "./full-screen";
 
@@ -46,6 +46,9 @@ export default function EmergencyPage() {
         </div>
         <CloseButton />
       </header>
+      <Suspense fallback={null}>
+        <Band />
+      </Suspense>
       <PageStatus />
       <main className="em-main">
         <Suspense fallback={null}>
@@ -100,6 +103,23 @@ function CallSecond({ call }: { call: Call }) {
   );
 }
 
+/** The capture running for the dog, and who started it: null for the person signed in. */
+async function runningNow(dogId: string, me: string): Promise<Running> {
+  const [names, { running }] = await Promise.all([householdNames(dogId), getCaptures(dogId, new Date())]);
+  if (!running) return null;
+  const by = running.recorded_by === me ? null : ((running.recorded_by && names[running.recorded_by]) ?? "Someone in the household");
+  return { id: running.id, startedAt: running.started_at, by };
+}
+
+/** Happening now running, above the calls. */
+async function Band() {
+  const owner = await requireOwner();
+  const dog = await getMyDog();
+  if (!dog) return null;
+  const [timeZone, running] = await Promise.all([getTimeZone(owner.userId), runningNow(dog.id, owner.userId)]);
+  return <HappeningBand dogId={dog.id} timeZone={timeZone} running={running} />;
+}
+
 async function Calls() {
   const owner = await requireOwner();
   const dog = await getMyDog();
@@ -113,11 +133,11 @@ async function Calls() {
       </div>
     );
   }
-  const [plan, names, timeZone, { running }] = await Promise.all([
+  const [plan, names, timeZone, running] = await Promise.all([
     getDogPlan(dog.id),
     householdNames(dog.id),
     getTimeZone(owner.userId),
-    getCaptures(dog.id, new Date()),
+    runningNow(dog.id, owner.userId),
   ]);
   const emergencyPlan = plan?.items.find((i) => isEmergencyPlan(i) && i.vet_instructions) ?? null;
   // Daily medicines first, then injections, as the card is read top down at the clinic desk.
@@ -174,34 +194,33 @@ async function Calls() {
             </Link>
           </>
         )}
-        <HappeningEntry
-          dogId={dog.id}
-          timeZone={timeZone}
-          running={
-            running && {
-              id: running.id,
-              startedAt: running.started_at,
-              by: running.recorded_by === owner.userId ? null : (running.recorded_by && names[running.recorded_by]) ?? "Someone in the household",
-            }
-          }
-        />
-        {emergencyPlan && (
-          <section className="panel stack-4" aria-label="Your vet's emergency plan">
-            <h2 className="ty-label c2">Your vet&rsquo;s emergency plan, as you entered it</h2>
-            <p className="ty-lead" style={{ whiteSpace: "pre-line" }}>
-              &ldquo;{emergencyPlan.vet_instructions}&rdquo;
+        <div className="em-entry">
+          <HappeningEntry dogId={dog.id} running={running} />
+        </div>
+        <section className="plan-panel" aria-labelledby="em-plan-t">
+          <h2 className="lab" id="em-plan-t">
+            Your vet&rsquo;s emergency plan, as you entered it
+          </h2>
+          {emergencyPlan ? (
+            <>
+              <blockquote>&ldquo;{emergencyPlan.vet_instructions}&rdquo;</blockquote>
+              <p className="prov">
+                {[
+                  emergencyPlan.set_by_vet_on && `Set by vet ${formatDate(emergencyPlan.set_by_vet_on)}`,
+                  `entered by ${who(emergencyPlan.created_by)}`,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")
+                  .replace(/^entered/, "Entered")}
+              </p>
+            </>
+          ) : (
+            <p className="ty-sm c2" style={{ textWrap: "pretty" }}>
+              None entered. If your vet gives you a written plan, it can be added on the Dog tab in their words, and it will show here
+              and on Happening now.
             </p>
-            <p className="prov">
-              {[
-                emergencyPlan.set_by_vet_on && `Set by vet ${formatDate(emergencyPlan.set_by_vet_on)}`,
-                `entered by ${who(emergencyPlan.created_by)}`,
-              ]
-                .filter(Boolean)
-                .join(" · ")
-                .replace(/^entered/, "Entered")}
-            </p>
-          </section>
-        )}
+          )}
+        </section>
       </div>
 
       <FullScreenCard title={<h2 className="r-h em-card-t">Emergency card</h2>}>

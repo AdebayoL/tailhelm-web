@@ -21,6 +21,7 @@ export function Page({
   space = 32,
   band,
   instrument,
+  above,
   children,
 }: {
   title: ReactNode;
@@ -46,6 +47,8 @@ export function Page({
   band?: "overlap" | "hero";
   /** Live figures under the title in the desktop top bar, as on Today. */
   instrument?: ReactNode;
+  /** Full width above the title, such as Happening now running. */
+  above?: ReactNode;
   children?: ReactNode;
 }) {
   const heading = (
@@ -80,6 +83,7 @@ export function Page({
   return (
     <main className="page">
       <OwnerOnly />
+      {above}
       <header className={classes}>
         {instrument ? (
           <>
@@ -103,7 +107,14 @@ export function Page({
  */
 export function PageStatus({ quiet = false }: { quiet?: boolean }) {
   return (
-    <Suspense fallback={<OfflineSupport quiet={quiet} />}>
+    <Suspense
+      fallback={
+        // The placeholder reads the address, which a record's own page only knows when it is asked for.
+        <Suspense fallback={null}>
+          <OfflineSupport quiet={quiet} />
+        </Suspense>
+      }
+    >
       <Status quiet={quiet} />
     </Suspense>
   );

@@ -22,6 +22,9 @@ export const MORE = [
 
 export const EMERGENCY_PATH = "/emergency";
 
+/** Happening now and its records, which belong to Today. */
+export const HAPPENING_PATH = "/happening-now";
+
 /**
  * What the Dog tab is called: the dog's own name when the household has one
  * dog, "Dogs" when it has several, and "Dog" before any dog is added.
@@ -37,10 +40,12 @@ const under = (pathname: string, href: string) => pathname === href || pathname.
 /** The tab a path belongs to, so the tab bar can mark it, or null outside the tabs. The Dog tab's screens count as Dog. */
 export function tabFor(pathname: string): Tab | null {
   if (MORE.some((m) => under(pathname, m.href))) return TABS[3];
+  if (under(pathname, HAPPENING_PATH)) return TABS[0];
   return TABS.find((t) => under(pathname, t.href)) ?? null;
 }
 
 /** The sidebar item a path belongs to: a tab, or one of the Dog tab's screens. */
 export function sideItemFor(pathname: string): string | null {
+  if (under(pathname, HAPPENING_PATH)) return TABS[0].href;
   return [...TABS, ...MORE].find((i) => under(pathname, i.href))?.href ?? null;
 }

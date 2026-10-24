@@ -20,6 +20,9 @@ describe("navigation", () => {
     expect(tabFor("/dog/plan")?.label).toBe("Dog");
     expect(tabFor("/dogs")).toBeNull();
     expect(tabFor(EMERGENCY_PATH)).toBeNull();
+    // A Happening now record's detail belongs to Today.
+    expect(tabFor("/happening-now/0f1c")?.label).toBe("Today");
+    expect(sideItemFor("/happening-now/0f1c")).toBe("/today");
   });
 
   it("counts the vet visit and reminders as the Dog tab on a phone, and as their own items in the sidebar", () => {

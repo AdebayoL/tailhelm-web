@@ -1427,42 +1427,197 @@
   .plus-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 }
 
-/* ---------- Happening now ----------
-   Working styles until its Claude Design pass: the timer screen is dark, its
-   numbers very large, its buttons at least 64 px and nothing below 18 px. */
+/* ==========================================================================
+   Happening now: the crisis timer, from the Claude Design file (24 Oct 2026).
+   For a frightened owner at night, one shaking hand. The timer screens are
+   always dark, whatever the phone is set to. Nothing in this set moves:
+   no pulse, no flash, no transition, no spinner. Text on the timer screens
+   is 18 px or larger and meets WCAG AAA (7:1). Red is used for two things
+   only: the first call button and the emergency banner.
+   ========================================================================== */
 @layer components {
-  .hn { min-height: 100dvh; display: flex; flex-direction: column; background: var(--ink-deep); color: #FFFFFF; }
-  .hn > .app-status { padding: 12px 20px 0; }
-  .hn-main { width: 100%; max-width: 600px; margin-inline: auto; padding: max(24px, env(safe-area-inset-top)) 20px max(40px, env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 20px; font-size: 18px; line-height: 26px; }
-  .hn-title { font-size: 24px; line-height: 32px; font-weight: 600; }
-  .hn-dog { color: var(--on-ink-2); font-weight: 500; }
-  .hn-clock { font-size: clamp(88px, 28vw, 168px); line-height: 1; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; margin: 8px 0 0; }
-  .hn-lasted { font-size: 28px; line-height: 36px; font-weight: 600; }
-  .hn-line, .hn-note { color: var(--on-ink-2); font-size: 18px; line-height: 26px; }
-  .hn-note { display: flex; gap: 8px; align-items: flex-start; }
-  .hn .banner { font-size: 18px; line-height: 26px; }
-  .hn-call { min-height: 88px; }
-  .hn .btn-call .l2 { font-size: 18px; line-height: 26px; }
-  .hn .btn-secondary { background: transparent; color: #FFFFFF; box-shadow: inset 0 0 0 1.5px var(--on-ink-2); }
-  .hn .btn-secondary:active { background: var(--ink-raise); }
-  .hn-stop { min-height: 72px; font-size: 22px; line-height: 28px; background: #FFFFFF; color: var(--ink-deep); }
-  .hn-stop:active { background: var(--on-ink-2); }
-  .hn-later { min-height: 64px; }
-  .hn-lnk { align-self: center; color: #FFFFFF; font-size: 18px; }
-  .hn .btn:focus-visible, .hn .lnk:focus-visible { outline: 2px solid var(--ink-accent); outline-offset: 2px; }
-  .hn-plan { border-top: 1px solid var(--ink-line); padding-top: 20px; }
-  .hn-plan-t { font-size: 18px; line-height: 26px; font-weight: 600; color: var(--on-ink-2); }
+  .still, .still *, .hn, .hn * { animation: none !important; transition: none !important; }
 
-  /* The way in, on Today and Emergency */
-  .hn-entry { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; align-items: center; column-gap: 14px; min-height: 72px; padding: 14px 18px; border-radius: 12px; background: var(--ink-band); color: #FFFFFF; text-decoration: none; box-shadow: var(--shadow-1); }
-  .hn-entry .lines { display: flex; flex-direction: column; }
-  .hn-entry .l1 { font-size: 20px; line-height: 28px; font-weight: 600; }
-  .hn-entry .l2 { font-size: 16px; line-height: 24px; color: var(--on-ink-2); }
-  .hn-entry .ic { color: var(--ink-accent); }
-  .hn-entry.is-running { background: var(--emergency-fill); }
-  .hn-entry.is-running .l2, .hn-entry.is-running .ic { color: #FFFFFF; }
-  .hn-entry:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
-  .hn-pulse { justify-self: center; width: 14px; height: 14px; border-radius: 50%; background: #FFFFFF; animation: hn-pulse 1.6s ease-in-out infinite; }
-  @keyframes hn-pulse { 50% { opacity: .35; } }
-  @media (prefers-reduced-motion: reduce) { .hn-pulse { animation: none; } }
+  /* the timer surface: its own palette, independent of the phone's theme */
+  .hn { --hn-bg: #070D12; --hn-surface: #121D27; --hn-line: #33475A; --hn-text: #FFFFFF; --hn-text-2: #C3D2DE;
+    --hn-red: #9B2218; --hn-red-ring: #FF8A80; --hn-teal: #B7DCE0; --hn-on-teal: #0F2232;
+    --bg: var(--hn-bg); --surface: var(--hn-surface); --panel: var(--hn-surface); --line: var(--hn-line); --line-control: #7C93A6;
+    --text: var(--hn-text); --text-2: var(--hn-text-2); --brand: #FFFFFF; --action: var(--hn-teal); --on-action: var(--hn-on-teal); --action-2: var(--hn-teal);
+    --focus: #8FD0D4; --recorded: #7CC4C9; --on-recorded: #0F2232;
+    color-scheme: dark; min-height: 100dvh; display: flex; flex-direction: column;
+    background: var(--hn-bg); color: var(--hn-text); font-size: 18px; line-height: 26px; }
+  .hn > .app-status { width: 100%; max-width: 600px; margin-inline: auto; padding: calc(env(safe-area-inset-top) + 12px) 20px 0; }
+  .hn-body { position: relative; width: 100%; max-width: 600px; margin-inline: auto; display: flex; flex-direction: column; gap: 20px; padding: calc(env(safe-area-inset-top) + 12px) 20px 168px; }
+  .hn > .app-status + .hn-body { padding-top: 12px; }
+  .hn-head { display: flex; align-items: center; gap: 10px; font-size: 24px; line-height: 30px; font-weight: 600; }
+  .hn-head:focus:not(:focus-visible) { outline: none; }
+  .hn-head .ic { width: 28px; height: 28px; stroke-width: 1.6; color: var(--hn-teal); flex: none; }
+  .hn-clockblock { display: flex; flex-direction: column; gap: 4px; }
+  .hn-clock { font-size: min(96px, 26vw); line-height: 1.04; font-weight: 500; letter-spacing: -.03em; font-variant-numeric: tabular-nums lining-nums; font-feature-settings: "tnum" 1, "lnum" 1; }
+  .hn-clock.h { font-size: min(84px, 21vw); line-height: 1.1; }
+  .hn-clock.s { font-size: min(64px, 18vw); line-height: 1.125; }
+  .hn-clock.frozen { color: var(--hn-text-2); }
+  .hn-started { font-size: 20px; line-height: 28px; color: var(--hn-text-2); font-variant-numeric: tabular-nums; }
+
+  /* on a phone the columns of the computer layout are just the one column */
+  .hn-top, .hn-left, .hn-right { display: contents; }
+  .hn-top-back { display: none !important; }
+
+  /* notes above the calls: one panel, one hairline between notes */
+  .hn-notes { display: flex; flex-direction: column; border-radius: 12px; background: var(--hn-surface); box-shadow: inset 0 0 0 1px var(--hn-line); }
+  .hn-note { display: grid; grid-template-columns: 24px minmax(0, 1fr); column-gap: 12px; align-items: start; padding: 12px 16px; font-size: 18px; line-height: 26px; }
+  .hn-note + .hn-note { border-top: 1px solid var(--hn-line); }
+  .hn-note .ic { margin-top: 1px; color: var(--hn-text-2); }
+
+  /* the calls: red first, then the outlined second */
+  .hn-calls { display: flex; flex-direction: column; gap: 12px; }
+  .hn-call { display: grid; grid-template-columns: 32px minmax(0, 1fr); column-gap: 16px; align-items: center; min-height: 104px; padding: 16px 20px; border-radius: 12px; text-decoration: none; color: #FFFFFF; }
+  .hn-call .ic { width: 32px; height: 32px; stroke-width: 1.6; }
+  .hn-call .l1 { display: block; font-size: 24px; line-height: 30px; font-weight: 600; }
+  .hn-call .l2 { display: block; font-size: 18px; line-height: 26px; font-variant-numeric: tabular-nums; }
+  .hn-call .num { display: block; font-size: 22px; line-height: 28px; font-weight: 500; font-variant-numeric: tabular-nums; letter-spacing: .01em; }
+  .hn-call.first { background: var(--hn-red); box-shadow: 0 0 0 2px var(--hn-red-ring); }
+  .hn-call.first:active { background: #7A1A12; }
+  .hn-call.second { min-height: 96px; background: var(--hn-surface); box-shadow: inset 0 0 0 2px var(--hn-teal); }
+  .hn-call.second:active { background: #1B2A36; }
+  .hn-call.second .l2 { color: var(--hn-text-2); }
+  .hn-call.big { min-height: 136px; }
+  .hn-call.big .l1 { font-size: 30px; line-height: 36px; }
+  .hn-call.big .num { font-size: 26px; line-height: 32px; }
+  .hn-call.big + .hn-call.second { min-height: 112px; }
+  .hn-call.pending { background: transparent; box-shadow: inset 0 0 0 2px var(--hn-line); color: var(--hn-text-2); }
+  .hn-order { font-size: 18px; line-height: 26px; color: var(--hn-text-2); }
+  .hn-quiet { display: grid; grid-template-columns: 24px minmax(0, 1fr); column-gap: 12px; padding: 16px; border-radius: 12px; box-shadow: inset 0 0 0 1px var(--hn-line); font-size: 18px; line-height: 26px; color: var(--hn-text-2); }
+  .hn-quiet a { color: var(--hn-teal); text-decoration: underline; text-underline-offset: 4px; }
+
+  /* "It has stopped": pinned to the foot of the screen, 20 px of dead space above it */
+  .hn-bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 2; padding: 20px max(20px, calc((100% - 600px) / 2 + 20px)) max(34px, calc(env(safe-area-inset-bottom) + 14px)); background: var(--hn-bg); box-shadow: 0 -1px 0 var(--hn-line); }
+  .hn-stop { display: flex; align-items: center; justify-content: center; gap: 14px; width: 100%; min-height: 72px; padding: 0 20px; border: 0; border-radius: 8px; background: var(--hn-teal); color: var(--hn-on-teal); font: inherit; font-size: 24px; line-height: 30px; font-weight: 600; cursor: pointer; }
+  .hn-stop:active { background: #98C9CE; }
+  .hn-stop .sq { width: 20px; height: 20px; border-radius: 4px; background: currentColor; flex: none; }
+  .hn-stop .ic { width: 28px; height: 28px; stroke-width: 1.8; }
+  .hn-btn { display: flex; align-items: center; justify-content: center; gap: 12px; width: 100%; min-height: 64px; padding: 0 20px; border: 0; border-radius: 8px; font: inherit; font-size: 22px; line-height: 28px; font-weight: 600; text-align: center; text-decoration: none; cursor: pointer; }
+  .hn-btn.primary { background: var(--hn-teal); color: var(--hn-on-teal); }
+  .hn-btn.primary:active { background: #98C9CE; }
+  .hn-btn.secondary { background: var(--hn-surface); color: #FFFFFF; box-shadow: inset 0 0 0 2px var(--hn-teal); }
+  .hn-btn.secondary:active { background: #1B2A36; }
+  .hn-link { display: inline-flex; align-self: flex-start; align-items: center; gap: 8px; min-height: 48px; font-size: 18px; line-height: 26px; font-weight: 500; color: var(--hn-teal); text-decoration: underline; text-underline-offset: 4px; }
+
+  /* the vet's own words */
+  .hn-plan { display: flex; flex-direction: column; gap: 10px; padding: 20px; border-radius: 12px; background: var(--hn-surface); box-shadow: inset 0 0 0 1px var(--hn-line); }
+  .hn-plan .lab { font-size: 18px; line-height: 26px; font-weight: 600; }
+  .hn-plan blockquote { margin: 0; font-size: 20px; line-height: 30px; white-space: pre-line; }
+  .hn-plan .prov2 { font-size: 18px; line-height: 26px; color: var(--hn-text-2); font-variant-numeric: tabular-nums; }
+
+  /* a published limit from a later pack: the one emergency banner */
+  .hn-limit { display: grid; grid-template-columns: 28px minmax(0, 1fr); column-gap: 14px; padding: 16px 18px; border-radius: 12px; background: #3D1512; box-shadow: inset 0 0 0 2px var(--hn-red-ring); color: #FFE4E0; font-size: 22px; line-height: 30px; font-weight: 600; }
+  .hn-limit .ic { width: 28px; height: 28px; color: var(--hn-red-ring); margin-top: 1px; }
+  .hn-limit .cite { display: block; margin-top: 6px; font-size: 18px; line-height: 26px; font-weight: 400; color: #FFE4E0; }
+
+  /* the screens with nothing running, and "It has stopped" (no spinner: a still glyph says saving) */
+  .hn-end { flex: 1; padding-bottom: max(40px, calc(env(safe-area-inset-bottom) + 20px)); }
+  .hn-gap { margin-top: 52px; text-wrap: balance; }
+  .hn-push { margin-top: auto; padding-top: 40px; }
+  .hn-acts { margin-top: 12px; }
+  .hn-status { display: grid; grid-template-columns: 28px minmax(0, 1fr); column-gap: 12px; align-items: start; padding: 14px 16px; border-radius: 12px; background: var(--hn-surface); box-shadow: inset 0 0 0 1px var(--hn-line); font-size: 20px; line-height: 28px; }
+  .hn-status .ic { width: 28px; height: 28px; color: var(--hn-teal); }
+  .hn-status.local .ic, .hn-status.saving .ic, .hn-status.quiet .ic { color: var(--hn-text-2); }
+  .hn-status.quiet { background: transparent; }
+  .hn-big { font-size: 32px; line-height: 38px; font-weight: 600; letter-spacing: -.01em; }
+  .hn-lead { font-size: 22px; line-height: 30px; font-variant-numeric: tabular-nums; }
+  .hn-end > .hn-lead.hn-gap { font-size: 24px; line-height: 34px; text-wrap: pretty; }
+  .hn-small { font-size: 18px; line-height: 26px; color: var(--hn-text-2); }
+  .hn-foot-call { margin-top: 28px; padding-top: 24px; border-top: 1px solid var(--hn-line); }
+  .hn-foot-call .hn-call { min-height: 88px; }
+
+  /* landscape on a phone: clock and "It has stopped" on the left, calls on the right, 40 px apart */
+  @media (orientation: landscape) and (max-height: 500px) {
+    .hn-run { max-width: none; display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); grid-template-rows: auto auto auto 1fr; grid-template-areas: "top right" "left right" "stop right" "back right"; column-gap: 40px; row-gap: 8px; padding: 16px max(47px, env(safe-area-inset-right)) 20px max(47px, env(safe-area-inset-left)); }
+    .hn-run .hn-top { display: block; grid-area: top; }
+    .hn-run .hn-head { font-size: 22px; }
+    .hn-run .hn-left { display: flex; flex-direction: column; gap: 8px; grid-area: left; }
+    .hn-run .hn-clock { font-size: 88px; line-height: 92px; }
+    .hn-run .hn-right { display: flex; flex-direction: column; gap: 12px; grid-area: right; justify-content: center; }
+    .hn-run .hn-bar { position: static; grid-area: stop; padding: 12px 0 0; box-shadow: none; background: none; }
+    .hn-run .hn-foot-back { grid-area: back; align-self: start; }
+  }
+
+  /* a computer: the clock on the left with "It has stopped" beneath it, the calls and the plan on the right */
+  @media (min-width: 1024px) {
+    .hn > .app-status { max-width: 1200px; padding: 24px 40px 0; }
+    .hn-run { max-width: 1200px; display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); grid-template-rows: auto auto 1fr; grid-template-areas: "top top" "left right" "stop right"; column-gap: 48px; row-gap: 0; padding: 0 40px 40px; }
+    .hn-run .hn-top { display: flex; grid-area: top; align-items: center; justify-content: space-between; gap: 16px; margin: 0 -40px 32px; padding: 24px 40px; box-shadow: inset 0 -1px 0 var(--hn-line); }
+    .hn-top-back { display: flex !important; width: auto; min-height: 52px; padding: 0 22px; font-size: 18px; }
+    .hn-run .hn-left { display: flex; flex-direction: column; gap: 16px; grid-area: left; }
+    .hn-run .hn-right { display: flex; flex-direction: column; gap: 16px; grid-area: right; }
+    .hn-run .hn-clock { font-size: 144px; line-height: 148px; }
+    .hn-run .hn-clock.h { font-size: 120px; line-height: 128px; }
+    .hn-run .hn-clock.s { font-size: 96px; line-height: 100px; }
+    .hn-run .hn-bar { position: static; grid-area: stop; align-self: start; margin-top: 40px; padding: 24px 0 0; box-shadow: none; border-top: 1px solid var(--hn-line); background: none; }
+    .hn-run .hn-stop { min-height: 80px; }
+    .hn-foot-back { display: none !important; }
+    .hn-end { padding-top: 48px; }
+  }
+
+  /* the running band on Today and Emergency: the timer's own surface, inverted to the page, perfectly still */
+  .hn-band { display: grid; grid-template-columns: 44px minmax(0, 1fr) 24px; column-gap: 14px; align-items: center; min-height: 84px; padding: 14px max(20px, calc((100% - 600px) / 2 + 20px)); background: #070D12; color: #FFFFFF; text-decoration: none; }
+  .hn-band .disc { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; background: #B7DCE0; color: #0F2232; }
+  .hn-band .disc .ic { width: 26px; height: 26px; stroke-width: 1.9; }
+  .hn-band .t1 { display: block; font-size: 22px; line-height: 28px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .hn-band .t2 { display: block; font-size: 16px; line-height: 22px; font-variant-numeric: tabular-nums; color: #C3D2DE; }
+  .hn-band .t2 u { text-underline-offset: 3px; font-weight: 600; color: #FFFFFF; }
+  .hn-band .chev { width: 24px; height: 24px; color: inherit; }
+  @media (prefers-color-scheme: dark) {
+    .hn-band { background: #EFF4F7; color: #070D12; }
+    .hn-band .disc { background: #0F2232; color: #B7DCE0; }
+    .hn-band .t2 { color: #3B4E5E; }
+    .hn-band .t2 u { color: #070D12; }
+    .hn-band:focus-visible { outline-color: #176B70; }
+  }
+  @media (min-width: 1024px) {
+    .hn-band { padding-inline: 48px; }
+  }
+
+  /* the entry point on Today and Emergency: full width, never red */
+  .hn-entry { display: grid; grid-template-columns: 44px minmax(0, 1fr) 24px; column-gap: 14px; align-items: center; width: 100%; min-height: 80px; padding: 14px 18px; border-radius: 12px; background: var(--surface); box-shadow: inset 0 0 0 1.5px var(--action-2), var(--shadow-1); color: var(--text); text-decoration: none; text-align: left; }
+  .hn-entry:active { background: var(--pressed); }
+  .hn-entry .disc { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; background: var(--panel); box-shadow: inset 0 0 0 1px var(--line); color: var(--brand); }
+  .hn-entry .disc .ic { width: 26px; height: 26px; stroke-width: 1.8; }
+  .hn-entry .e1 { display: block; font-size: 18px; line-height: 24px; font-weight: 600; color: var(--action-2); }
+  .hn-entry .e2 { display: block; font-size: 14px; line-height: 20px; color: var(--text-2); }
+  .hn-entry .chev { color: var(--action-2); }
+  .em-entry { padding-top: 12px; border-top: 1px solid var(--line); }
+  /* On a phone Today stacks its cards in the board's order: the way in sits under the next dose. */
+  @media (max-width: 1023.98px) { .d-content > .today-entry { order: 1; } }
+
+  /* the vet's plan panel on Emergency */
+  .plan-panel { display: flex; flex-direction: column; gap: 10px; padding: 20px; border-radius: 12px; background: var(--panel); }
+  .plan-panel blockquote { margin: 0; font-size: 18px; line-height: 27px; white-space: pre-line; }
+  .plan-panel .lab { font-size: 16px; line-height: 24px; font-weight: 600; }
+
+  /* afterwards */
+  .finish-card { display: flex; flex-direction: column; gap: 14px; }
+  .pd-rec.hnow .k { background: transparent; box-shadow: inset 0 0 0 1.5px var(--text); border-radius: 50%; }
+  .pd-note { grid-column: 3 / -1; margin-top: 2px; padding: 8px 12px; border-radius: 8px; background: var(--panel); font-size: 14px; line-height: 20px; color: var(--text); overflow-wrap: anywhere; white-space: pre-line; }
+
+  /* Add detail: plain on a phone, a card beside the record on a computer */
+  .hn-edge { padding: 20px; }
+  .hn-edge .ty-section { text-wrap: pretty; }
+  .hn-note-inp { min-height: 152px; padding: 14px 16px; font-size: 18px; line-height: 26px; resize: vertical; }
+  .hn-detail-acts { display: flex; flex-direction: column; gap: 12px; }
+  .hn-mistake { display: flex; flex-direction: column; align-items: stretch; }
+  .hn-mistake.panel { padding: 20px; }
+  .hn-mistake.panel > .lnk { margin: -12px 0; }
+  .hn-mistake > .lnk { align-self: flex-start; }
+  .hn-record { padding: 24px; }
+  .hn-record .dl { grid-template-columns: 96px minmax(0, 1fr); row-gap: 10px; }
+  @media (max-width: 1023.98px) {
+    .hn-detail.card { background: none; border: 0; box-shadow: none; padding: 0; }
+  }
+  @media (min-width: 1024px) {
+    .hn-lasted { font-size: 22px; line-height: 30px; font-weight: 500; }
+    .hn-note-inp { min-height: 168px; }
+    .hn-detail-acts { flex-direction: row; flex-wrap: wrap; }
+    .hn-detail-acts > .btn { width: auto; padding: 0 32px; }
+  }
 }

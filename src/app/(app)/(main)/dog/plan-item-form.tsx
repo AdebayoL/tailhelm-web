@@ -4,7 +4,7 @@ import { useActionState, useRef, useState } from "react";
 import { DateParts } from "@/app/_components/date-parts";
 import { ErrorText, Field, NotSaved, RadioGroup, describedBy } from "@/app/_components/form";
 import { Icon } from "@/app/_components/icon";
-import { DOSE_UNITS, type PlanOption } from "@/lib/plan/input";
+import { DOSE_UNITS, EMERGENCY_PLAN_KEY, type PlanOption } from "@/lib/plan/input";
 import { addPlanItem, type PlanFormState } from "./plan-actions";
 
 export type ActiveItem = { id: string; pack_key: string; label: string };
@@ -42,6 +42,8 @@ function Fields({
   const medicine = options.find((m) => m.key === medicineKey);
   const isTest = medicine?.kind === "observation";
   const isPlan = medicine?.kind === "task";
+  // The vet's written emergency plan: their words first, then the date, as Emergency and Happening now show it.
+  const isEmergencyPlan = medicine?.key === EMERGENCY_PLAN_KEY;
   const replaceable = activeItems.filter((i) => i.pack_key === medicineKey);
   const err = (name: string) => state.errors?.[name];
   const was = (name: string, fallback = "") => state.values?.[name] ?? fallback;
@@ -72,6 +74,31 @@ function Fields({
         aria-describedby={describedBy(`plan-${name}`, { error: err(name) })}
         className="inp tn"
         style={{ maxWidth: 160 }}
+      />
+    </Field>
+  );
+
+  const words = (
+    <Field
+      id="plan-vet_instructions"
+      label={isEmergencyPlan ? "Your vet's words" : isPlan ? "Your vet's plan, in their words" : "Your vet's instructions"}
+      optional={!isPlan}
+      hint={
+        isEmergencyPlan
+          ? "Type it exactly as your vet wrote it. It's shown on Emergency and Happening now, in their words, with the date they set it."
+          : "Copy them as your vet wrote them."
+      }
+      error={err("vet_instructions")}
+    >
+      <textarea
+        id="plan-vet_instructions"
+        name="vet_instructions"
+        defaultValue={was("vet_instructions")}
+        rows={isPlan ? 5 : 3}
+        maxLength={isPlan ? 1000 : 500}
+        aria-invalid={err("vet_instructions") ? true : undefined}
+        aria-describedby={describedBy("plan-vet_instructions", { hint: true, error: err("vet_instructions") })}
+        className="inp"
       />
     </Field>
   );
@@ -164,31 +191,24 @@ function Fields({
             </div>
           )}
 
+          {isEmergencyPlan && words}
+
           <DateParts
             name="set_by_vet_on"
-            legend={isTest ? "Date your vet asked for these" : isPlan ? "Date your vet gave you this plan" : "Date your vet set this dose"}
+            legend={
+              isTest
+                ? "Date your vet asked for these"
+                : isEmergencyPlan
+                  ? "Date your vet set it"
+                  : isPlan
+                    ? "Date your vet gave you this plan"
+                    : "Date your vet set this dose"
+            }
             error={err("set_by_vet_on")}
             defaultValue={was("set_by_vet_on")}
           />
 
-          <Field
-            id="plan-vet_instructions"
-            label={isPlan ? "Your vet's plan, in their words" : "Your vet's instructions"}
-            optional={!isPlan}
-            hint="Copy them as your vet wrote them."
-            error={err("vet_instructions")}
-          >
-            <textarea
-              id="plan-vet_instructions"
-              name="vet_instructions"
-              defaultValue={was("vet_instructions")}
-              rows={isPlan ? 5 : 3}
-              maxLength={isPlan ? 1000 : 500}
-              aria-invalid={err("vet_instructions") ? true : undefined}
-              aria-describedby={describedBy("plan-vet_instructions", { hint: true, error: err("vet_instructions") })}
-              className="inp"
-            />
-          </Field>
+          {!isEmergencyPlan && words}
 
           {replaceable.length > 0 && (
             <RadioGroup

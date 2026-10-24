@@ -78,8 +78,8 @@ describe("emergencyCalls", () => {
 
   it("puts the out-of-hours vet first when the saved hours say your vet is closed", () => {
     const r = emergencyCalls(own, ooh, at("2026-10-12", "03:10"), TZ);
-    expect(r.first).toEqual({ title: "Call out-of-hours vet", sub: "Northgate Vets · open 24 hours", phone: "01632 960 735" });
-    expect(r.second).toEqual({ title: "Call Larkfield Vets", sub: "Your own vet · opens 08:00", phone: "01632 960 418" });
+    expect(r.first).toEqual({ title: "Call out-of-hours vet", sub: "Northgate Vets · open 24 hours", phone: "01632 960 735", who: "Northgate Vets" });
+    expect(r.second).toEqual({ title: "Call Larkfield Vets", sub: "Your own vet · opens 08:00", phone: "01632 960 418", who: "Your own vet" });
     expect(r.why).toBe("Order chosen from the opening hours you saved for Larkfield Vets.");
   });
 
@@ -91,7 +91,7 @@ describe("emergencyCalls", () => {
   it("puts your own vet first when no hours are saved", () => {
     const r = emergencyCalls({ ...own, hours: null }, { ...ooh, name: null, hours: null }, at("2026-10-12", "03:10"), TZ);
     expect(r.first?.title).toBe("Call Larkfield Vets");
-    expect(r.second).toEqual({ title: "Call out-of-hours vet", sub: null, phone: "01632 960 735" });
+    expect(r.second).toEqual({ title: "Call out-of-hours vet", sub: null, phone: "01632 960 735", who: null });
     expect(r.why).toBe("If your own vet is closed, call the out-of-hours number.");
   });
 

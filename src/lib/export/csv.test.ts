@@ -22,6 +22,7 @@ const data: ExportData = {
       out_of_hours_phone: null,
       insurance_ref: null,
       status: "active",
+      noticed_off: false,
     },
   ],
   conditions: [{ id: "c1", dog_id: "d1", condition_key: "addisons", name: "Addison's disease", pack_version: "0.2.0", variant: "typical", diagnosed_on: "2026-03-01" }],
@@ -101,6 +102,7 @@ const data: ExportData = {
     },
   ],
   events: [{ dog_id: "d1", kind: "note", started_at: "2026-10-10T19:00:00Z", ended_at: null, note: "=HYPERLINK(\"x\")", recorded_by: "u2" }],
+  noticed: [],
   names: { u1: "Ade", u2: "Sam" },
 };
 
@@ -171,6 +173,34 @@ describe("buildExportCsv with Happening now", () => {
     ).split("\r\n");
     expect(rows).toContain("Bella,Happening now,2026-10-15,00:58,,252,seconds,Wobbly after; Stopped at 01:02,Ade");
     expect(rows).toContain("Bella,Happening now,2026-10-16,10:00,,,,Still running,Ade");
+  });
+});
+
+describe("buildExportCsv with Noticed", () => {
+  it("holds each observation with its records' dates and the household's marks", () => {
+    const rows = buildExportCsv(
+      {
+        ...data,
+        noticed: [
+          {
+            dog_id: "d1",
+            rule_family: "direction",
+            computed_on: "2026-10-25",
+            window_start: "2026-10-01",
+            window_end: "2026-10-25",
+            copy: "Bella’s Na:K ratio has fallen across the last 3 results: 30.1 on 1 Oct, 28.4 on 8 Oct and 27.2 on 15 Oct.",
+            dismissed_at: null,
+            added_to_report_at: "2026-10-25T09:00:00Z",
+            added_by: "u2",
+          },
+        ],
+      },
+      "Europe/London",
+      packFor,
+    ).split("\r\n");
+    expect(rows).toContain(
+      'Bella,Noticed,2026-10-25,,Direction,,,"Bella’s Na:K ratio has fallen across the last 3 results: 30.1 on 1 Oct, 28.4 on 8 Oct and 27.2 on 15 Oct.; Records from 2026-10-01 to 2026-10-25; Added to the 90-day summary by Sam",Tailhelm',
+    );
   });
 });
 

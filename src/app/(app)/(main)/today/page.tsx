@@ -38,6 +38,7 @@ import { OfflineDay } from "./offline-day";
 import { QuickCheck } from "./quick-check";
 import { ReminderBanner } from "./reminder-banner";
 import { StressEventForm } from "./stress-event-form";
+import { TodayNoticed } from "./noticed/card";
 import { type InjectionStat, TodayStats } from "./today-stats";
 
 export const metadata: Metadata = { title: "Today · Tailhelm" };
@@ -469,6 +470,10 @@ async function TodayBoard({
           </section>
         )}
       </div>
+
+      <Suspense fallback={null}>
+        <TodayNoticed dog={dog} today={today.date} />
+      </Suspense>
 
       <Suspense fallback={null}>
         <Day31

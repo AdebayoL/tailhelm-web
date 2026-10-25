@@ -85,6 +85,7 @@ const data: ExportData = {
     { dog_id: "d1", kind: "stressful_event", started_at: "2026-10-30T09:00:00Z", ended_at: null, note: "Kennels", recorded_by: "ade" },
     { dog_id: "d2", kind: "note", started_at: "2026-10-01T10:00:00Z", ended_at: null, note: "Another dog", recorded_by: "ade" },
   ],
+  noticed: [],
   names: { ade: "Adebayo", sam: "Sam" },
 };
 

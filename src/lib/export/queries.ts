@@ -23,18 +23,18 @@ export async function getExportData(since?: { date: LocalDate; instant: string }
     () =>
       supabase
         .from("dogs")
-        .select("id, name, breed, sex, date_of_birth, vet_name, vet_phone, vet_email, out_of_hours_phone, insurance_ref, status")
+        .select("id, name, breed, sex, date_of_birth, vet_name, vet_phone, vet_email, out_of_hours_phone, insurance_ref, status, noticed_off")
         .order("created_at")
         .order("id"),
     "dogs",
   );
   const dogIds = dogs.map((d) => d.id);
   if (dogIds.length === 0) {
-    return { dogs, conditions: [], planItems: [], treatments: [], vials: [], observations: [], events: [], names: {} };
+    return { dogs, conditions: [], planItems: [], treatments: [], vials: [], observations: [], events: [], noticed: [], names: {} };
   }
 
   const eventRows = () => supabase.from("events").select("dog_id, kind, started_at, ended_at, note, recorded_by").in("dog_id", dogIds);
-  const [conditionRows, events, nameMaps] = await Promise.all([
+  const [conditionRows, events, noticed, nameMaps] = await Promise.all([
     all<Omit<ExportData["conditions"][number], "name">>(
       () => supabase.from("dog_conditions").select("id, dog_id, condition_key, pack_version, variant, diagnosed_on").in("dog_id", dogIds).order("id"),
       "conditions",
@@ -42,6 +42,20 @@ export async function getExportData(since?: { date: LocalDate; instant: string }
     all<ExportData["events"][number]>(
       () => (since ? eventRows().or(`started_at.gte.${since.instant},ended_at.gte.${since.instant}`) : eventRows()).order("started_at").order("id"),
       "events",
+    ),
+    all<ExportData["noticed"][number]>(
+      () =>
+        from(
+          supabase
+            .from("observations_noticed")
+            .select("dog_id, rule_family, computed_on, window_start, window_end, copy, dismissed_at, added_to_report_at, added_by")
+            .in("dog_id", dogIds),
+          "computed_on",
+          since?.date,
+        )
+          .order("computed_on")
+          .order("id"),
+      "what Tailhelm noticed",
     ),
     Promise.all(dogIds.map(householdNames)),
   ]);
@@ -97,5 +111,5 @@ export async function getExportData(since?: { date: LocalDate; instant: string }
     ),
   ]);
 
-  return { dogs, conditions, planItems, treatments, vials, observations, events, names: Object.assign({}, ...nameMaps) };
+  return { dogs, conditions, planItems, treatments, vials, observations, events, noticed, names: Object.assign({}, ...nameMaps) };
 }

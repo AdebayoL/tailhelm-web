@@ -29,6 +29,7 @@ import { DogProfileForm } from "./dog-profile-form";
 import { PlanItemForm } from "./plan-item-form";
 import { RetireButton } from "./retire-button";
 import { SignOutButton } from "./sign-out-button";
+import { NoticedSetting } from "../today/noticed/card";
 import { VetsForm } from "./vets-form";
 
 export const metadata: Metadata = { title: "Dog · Tailhelm" };
@@ -171,6 +172,10 @@ async function DogContent() {
       ) : (
         <AddCondition dog={dog} />
       )}
+
+      <Suspense fallback={null}>
+        <NoticedSetting dog={dog} today={today} />
+      </Suspense>
 
       <Account email={owner.email} userId={owner.userId} />
     </Page>

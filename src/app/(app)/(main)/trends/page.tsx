@@ -40,6 +40,7 @@ import { ResultForm } from "./result-form";
 import { CycleFigure } from "./cycle-figure";
 import { ClinicKey, HomeKey, InjectionKey, WeightChart } from "./weight-chart";
 import { WeightForm } from "./weight-form";
+import { TrendsNoticed } from "../today/noticed/card";
 
 export const metadata: Metadata = { title: "Trends · Tailhelm" };
 
@@ -193,6 +194,10 @@ async function TrendsContent({ searchParams }: { searchParams: Promise<Record<st
       ))}
 
       <Notes notes={notes} olderKept={notes.length < allNotes.length} dogId={dog.id} today={today} local={local} who={who} me={owner.userId} />
+
+      <Suspense fallback={null}>
+        <TrendsNoticed dog={dog} today={today} />
+      </Suspense>
 
       {older && <HistoryLine />}
     </Page>

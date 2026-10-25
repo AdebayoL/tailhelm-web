@@ -265,10 +265,24 @@ export function buildSummary({ data, dogId, timeZone, now, packFor }: Args): Pdf
     blocks.push(lead(`${formatDate(local(n.started_at).date)}, ${who(n.recorded_by)}:`, n.note ?? "", { gap: true }));
   }
 
+  // What Noticed found that the household chose to add, while Noticed is on for the dog.
+  const noticed = dog.noticed_off
+    ? []
+    : data.noticed
+        .filter((n) => n.dog_id === dogId && n.added_to_report_at && !n.dismissed_at && inWindow(n.computed_on))
+        .sort((a, b) => b.computed_on.localeCompare(a.computed_on));
+  if (noticed.length > 0) {
+    blocks.push({ kind: "heading", text: "Noticed" });
+    blocks.push(plain(`What Tailhelm found in ${dog.name}’s own records, added here by the household.`, { muted: true }));
+    for (const n of noticed) blocks.push(lead(`${formatDate(n.computed_on)}:`, `${n.copy} Added by ${who(n.added_by)}.`, { gap: true }));
+  }
+
   blocks.push({ kind: "heading", text: "About this summary" });
   blocks.push(
     plain(
-      `Prepared with Tailhelm from what ${dog.name}’s household entered. It is not a clinical record. Doses are exactly as the household typed them from the vet’s instructions; Tailhelm never works one out. A dose given but not ticked shows here as not ticked.`,
+      `Prepared with Tailhelm from what ${dog.name}’s household entered. It is not a clinical record. Doses are exactly as the household typed them from the vet’s instructions; Tailhelm never works one out. A dose given but not ticked shows here as not ticked.${
+        noticed.length > 0 ? " Each observation under Noticed states numbers and dates from these records; it is not a clinical finding." : ""
+      }`,
     ),
   );
 

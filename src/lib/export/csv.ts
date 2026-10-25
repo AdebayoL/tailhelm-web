@@ -1,6 +1,7 @@
 import { type LocalDate, toLocal } from "@/engine/time";
 import type { PlanSchedule } from "@/engine/schedule";
 import { HAPPENING_KIND } from "@/lib/happening/timer";
+import { FAMILY_NAMES, type Family } from "@/lib/noticed/rules";
 import { describeSchedule } from "@/lib/plan/input";
 import { NOTE_KIND } from "@/lib/notes/input";
 import { WEIGHT_TYPE } from "@/lib/weight/input";
@@ -24,6 +25,8 @@ export type ExportDog = {
   out_of_hours_phone: string | null;
   insurance_ref: string | null;
   status: string;
+  /** Noticed switched off for the dog by the household. */
+  noticed_off: boolean;
 };
 
 export type ExportCondition = {
@@ -103,6 +106,19 @@ export type ExportEvent = {
   recorded_by: string | null;
 };
 
+/** An observation Noticed made, with the household's marks on it. */
+export type ExportNoticed = {
+  dog_id: string;
+  rule_family: string;
+  computed_on: string;
+  window_start: string;
+  window_end: string;
+  copy: string;
+  dismissed_at: string | null;
+  added_to_report_at: string | null;
+  added_by: string | null;
+};
+
 export type ExportData = {
   dogs: ExportDog[];
   conditions: ExportCondition[];
@@ -111,6 +127,7 @@ export type ExportData = {
   vials: ExportVial[];
   observations: ExportObservation[];
   events: ExportEvent[];
+  noticed: ExportNoticed[];
   /** Household members' names by profile id. */
   names: Record<string, string>;
 };
@@ -302,6 +319,26 @@ export function buildExportCsv(
       "",
       isNote ? (e.note ?? "") : end && end !== start ? `Until ${end}` : "",
       who(e.recorded_by),
+    ]);
+  }
+
+  // What Noticed found, with whether the household dismissed it or added it to the 90-day summary.
+  for (const n of data.noticed) {
+    rows.push([
+      dogName.get(n.dog_id) ?? "",
+      "Noticed",
+      n.computed_on,
+      "",
+      FAMILY_NAMES[n.rule_family as Family] ?? n.rule_family,
+      "",
+      "",
+      join([
+        n.copy,
+        `Records from ${n.window_start} to ${n.window_end}`,
+        n.added_to_report_at && `Added to the 90-day summary${n.added_by ? ` by ${who(n.added_by)}` : ""}`,
+        n.dismissed_at && "Dismissed",
+      ]),
+      "Tailhelm",
     ]);
   }
 

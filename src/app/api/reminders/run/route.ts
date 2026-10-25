@@ -1,5 +1,6 @@
 import { timingSafeEqual } from "node:crypto";
 import * as Sentry from "@sentry/nextjs";
+import { runNoticed } from "@/lib/noticed/run";
 import { reconcileYesterday } from "@/lib/reminders/reconcile-run";
 import { runReminders } from "@/lib/reminders/run";
 import { type AdminClient, createAdminClient } from "@/lib/supabase/admin";
@@ -12,7 +13,8 @@ import { cleanKey } from "@/lib/env/key";
  * overlapping call does no harm.
  *
  * Every run checks in with Sentry, which alerts the founder when runs stop
- * arriving or keep failing. Once a day a run also reconciles the day before.
+ * arriving or keep failing. Once a day a run also reconciles the day before,
+ * and from 04:00 UK time runs also look at each dog's records for Noticed.
  */
 export const maxDuration = 60;
 
@@ -59,6 +61,7 @@ async function run(request: Request) {
     const summary = await runReminders(admin, now, appUrl);
     console.info("[reminders] run", { ...summary, ms: Date.now() - started });
     await reconcile(admin, now);
+    await notice(admin, now);
     return finish("ok", Response.json({ ok: true, ...summary }));
   } catch (error) {
     console.error("[reminders] run failed", { message: (error as Error).message });
@@ -83,6 +86,17 @@ async function reconcile(admin: AdminClient, now: Date) {
     }
   } catch (error) {
     console.error("[reminders] daily check failed", { message: (error as Error).message });
+    Sentry.captureException(error);
+  }
+}
+
+/** Noticed's daily look at each dog. Like the reconciliation, its failure is reported but never fails the run. */
+async function notice(admin: AdminClient, now: Date) {
+  try {
+    const run = await runNoticed(admin, now);
+    if (run && run.looked > 0) console.info("[noticed] run", run);
+  } catch (error) {
+    console.error("[noticed] run failed", { message: (error as Error).message });
     Sentry.captureException(error);
   }
 }

@@ -22,6 +22,16 @@ import { formatDate } from "@/lib/plan/input";
 export const FAMILIES = ["cycle_position", "interval_change", "co_occurrence", "direction", "absence", "plain_record"] as const;
 export type Family = (typeof FAMILIES)[number];
 
+/** Each family's name, as the Build Spec gives it. */
+export const FAMILY_NAMES: Record<Family, string> = {
+  cycle_position: "Cycle position",
+  interval_change: "Interval change",
+  co_occurrence: "Co-occurrence",
+  direction: "Direction",
+  absence: "Absence",
+  plain_record: "Plain record",
+};
+
 export const THRESHOLDS = {
   /** Cycle position: the same point in this many injection cycles (spec: 3 cycles). */
   cycles: 3,
@@ -382,7 +392,7 @@ function signsByCycle(input: NoticedInput): Observation[] {
 
 function intervals(input: NoticedInput): Observation[] {
   const { today } = input;
-  const subjects: { key: string; times: { on: LocalDate; ids: string[] }[]; evidence: Evidence[]; sentence: (on: string, gap: string) => string; what: string }[] = [];
+  const subjects: { key: string; times: { on: LocalDate; ids: string[] }[]; evidence: Evidence[]; sentence: (on: string, gap: string) => string; what: string; runs: boolean }[] = [];
   for (const key of [...new Set(input.signs.map((s) => s.key))]) {
     const rows = input.signs.filter((s) => s.key === key);
     const label = rows[0].label;
@@ -391,7 +401,8 @@ function intervals(input: NoticedInput): Observation[] {
       times: episodes(rows).map((e) => ({ on: e.start, ids: e.ids })),
       evidence: rows.map((s) => ({ id: s.id, on: s.on, text: `Quick check: ${label}` })),
       sentence: (on, gap) => `${quoted(label)} was logged on ${on}, ${gap}.`,
-      what: "a sign",
+      what: "the same sign was logged",
+      runs: true,
     });
   }
   if (input.happenings.length > 0) {
@@ -400,7 +411,8 @@ function intervals(input: NoticedInput): Observation[] {
       times: input.happenings.map((h) => ({ on: h.on, ids: [h.id] })),
       evidence: input.happenings,
       sentence: (on, gap) => `A Happening now record was started on ${on}, ${gap}.`,
-      what: "Happening now",
+      what: "a Happening now record was started",
+      runs: false,
     });
   }
 
@@ -424,7 +436,9 @@ function intervals(input: NoticedInput): Observation[] {
         text: `${s.sentence(when(last.on, today), gap)} Before that, the ${earlier.length === 1 ? "gap was" : "gaps were"} ${joinList(earlier.map(String))} ${
           earlier.length === 1 && earlier[0] === 1 ? "day" : "days"
         }.`,
-        rule: `Tailhelm looks at the time between the last ${THRESHOLDS.events} or more times ${s.what} was logged, and notices when the latest gap is half or less, or twice or more, the usual gap before it. Days in a row count as one time.`,
+        rule: `Tailhelm looks at the time between the last ${THRESHOLDS.events} or more times ${s.what}, and notices when the latest gap is half or less, or twice or more, the usual gap before it.${
+          s.runs ? " Days in a row count as one time." : ""
+        }`,
         records: s.evidence,
         today,
       }),

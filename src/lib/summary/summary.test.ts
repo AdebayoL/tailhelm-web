@@ -58,8 +58,9 @@ const data: ExportData = {
       out_of_hours_phone: "01632 960999",
       insurance_ref: null,
       status: "active",
+      noticed_off: false,
     },
-    { id: "d2", name: "Rex", breed: null, sex: null, date_of_birth: null, vet_name: null, vet_phone: null, vet_email: null, out_of_hours_phone: null, insurance_ref: null, status: "active" },
+    { id: "d2", name: "Rex", breed: null, sex: null, date_of_birth: null, vet_name: null, vet_phone: null, vet_email: null, out_of_hours_phone: null, insurance_ref: null, status: "active", noticed_off: false },
   ],
   conditions: [
     { id: "c1", dog_id: "d1", condition_key: "addisons", name: "Addison's disease", pack_version: "0.2.0", variant: "typical", diagnosed_on: "2026-03-01" },
@@ -116,6 +117,7 @@ const data: ExportData = {
     { dog_id: "d1", kind: "note", started_at: "2026-10-12T10:00:00Z", ended_at: null, note: "Slower on the walk.", recorded_by: "u2" },
     { dog_id: "d1", kind: "note", started_at: "2026-05-01T10:00:00Z", ended_at: null, note: "From the spring.", recorded_by: "u2" },
   ],
+  noticed: [],
   names: { u1: "Adebayo", u2: "Sam" },
 };
 
@@ -195,6 +197,35 @@ describe("buildSummary", () => {
     expect(t).toContain("No weights entered.");
     expect(t).toContain("No checks saved.");
     expect(t).toContain("No notes.");
+  });
+
+  it("lists what Noticed found that the household added, and nothing else of it", () => {
+    const n = (over: Partial<ExportData["noticed"][number]>): ExportData["noticed"][number] => ({
+      dog_id: "d1",
+      rule_family: "direction",
+      computed_on: "2026-10-11",
+      window_start: "2026-09-20",
+      window_end: "2026-10-11",
+      copy: "Bella’s Na:K ratio has fallen across the last 3 results: 30.1 on 20 Sep, 28.4 on 1 Oct and 27.2 on 8 Oct.",
+      dismissed_at: null,
+      added_to_report_at: "2026-10-11T08:00:00Z",
+      added_by: "u2",
+      ...over,
+    });
+    const noticed = [n({}), n({ copy: "Not added.", added_to_report_at: null, added_by: null }), n({ copy: "Dismissed.", dismissed_at: "2026-10-12T08:00:00Z" })];
+    const t = summaryText(buildSummary({ data: { ...data, noticed }, dogId: "d1", timeZone: tz, now, packFor })!);
+    expect(t).toContain("## Noticed");
+    expect(t).toContain(
+      "11 Oct 2026: Bella’s Na:K ratio has fallen across the last 3 results: 30.1 on 20 Sep, 28.4 on 1 Oct and 27.2 on 8 Oct. Added by Sam.",
+    );
+    expect(t).not.toContain("Not added.");
+    expect(t).not.toContain("Dismissed.");
+    expect(t).toContain("it is not a clinical finding");
+    expect(t).not.toMatch(/\b(safe|normal|fine|good|bad|better|worse|should)\b/i);
+
+    const off = { ...data, noticed, dogs: data.dogs.map((d) => ({ ...d, noticed_off: true })) };
+    expect(summaryText(buildSummary({ data: off, dogId: "d1", timeZone: tz, now, packFor })!)).not.toContain("## Noticed");
+    expect(text()).not.toContain("## Noticed");
   });
 
   it("is only for a dog in the household", () => {
